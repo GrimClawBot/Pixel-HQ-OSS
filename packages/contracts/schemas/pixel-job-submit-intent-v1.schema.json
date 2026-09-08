@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-job-submit-intent-v1.schema.json",
+  "title": "Pixel Job Submit Intent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_name", "schema_version", "idempotency_key", "job_type", "requested_capability"],
+  "properties": {
+    "event_name": { "const": "pixel.job.submit-intent.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "idempotency_key": { "$ref": "#/$defs/identifier" },
+    "job_type": { "const": "system-status" },
+    "requested_capability": { "enum": ["pixel.system-status.read", "pixel.system-status.raw.read"] }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }
+  }
+}

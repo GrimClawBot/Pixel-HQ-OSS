@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixel.local/access/pixel-access-request-v1.schema.json",
+  "title": "Pixel Server-Internal Access Evaluation Request v1",
+  "description": "Server-internal canonical evaluation request assembled only from server-owned identity, device-trust, placement, and target context. This is not a browser contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "event_name", "schema_version", "occurred_at", "environment", "trace_id", "span_id", "identity", "device", "target", "provenance"],
+  "properties": {
+    "request_id": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "event_name": { "const": "pixel.access.request.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "occurred_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id", "identity_class", "role", "verification_status"],
+      "properties": {
+        "subject_id": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+        "identity_class": { "const": "human" },
+        "role": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+        "verification_status": { "enum": ["verified", "not_verified", "unknown"] }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "enrollment_status", "trust_status", "certificate_status", "risk_posture"],
+      "properties": {
+        "device_id": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+        "enrollment_status": { "enum": ["enrolled", "not_enrolled", "unknown"] },
+        "trust_status": { "enum": ["trusted", "untrusted", "revoked", "unknown"] },
+        "certificate_status": { "enum": ["valid", "not_valid", "unknown"] },
+        "risk_posture": { "enum": ["acceptable", "not_acceptable", "unknown"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "trust_status": { "const": "trusted" } },
+            "required": ["trust_status"]
+          },
+          "then": {
+            "properties": { "enrollment_status": { "const": "enrolled" } }
+          }
+        }
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_id", "capability"],
+      "properties": {
+        "app_id": { "const": "pixel-bench" },
+        "capability": { "const": "launch" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_provider_contract", "identity_source", "device_trust_provider_contract", "device_trust_source"],
+      "properties": {
+        "identity_provider_contract": { "const": "pixel.identity-context-provider.v1" },
+        "identity_source": { "enum": ["simulator", "live"] },
+        "device_trust_provider_contract": { "const": "pixel.device-trust-provider.v1" },
+        "device_trust_source": { "enum": ["simulator", "live"] }
+      }
+    }
+  }
+}

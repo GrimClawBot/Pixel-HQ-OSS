@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-relay-job-transition-v1.schema.json",
+  "title": "Pixel Relay Job Transition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["transition_id", "event_name", "schema_version", "occurred_at", "environment", "trace_id", "span_id", "job_id", "execution_id", "from_state", "to_state", "reason_code", "provenance"],
+  "properties": {
+    "transition_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.relay.job-transition.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "occurred_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+    "from_state": { "enum": ["SUBMITTED", "ACCEPTED", "RUNNING"] },
+    "to_state": { "enum": ["ACCEPTED", "RUNNING", "COMPLETED", "FAILED"] },
+    "reason_code": { "enum": ["JOB_ACCEPTED", "EXECUTION_STARTED", "EXECUTION_COMPLETED", "CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_FAILED", "WORKER_RESULT_INVALID"] },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        { "properties": { "from_state": { "const": "SUBMITTED" }, "to_state": { "const": "ACCEPTED" }, "reason_code": { "const": "JOB_ACCEPTED" }, "execution_id": { "type": "null" } } },
+        { "properties": { "from_state": { "const": "ACCEPTED" }, "to_state": { "const": "RUNNING" }, "reason_code": { "const": "EXECUTION_STARTED" }, "execution_id": { "$ref": "#/$defs/identifier" } } },
+        { "properties": { "from_state": { "const": "RUNNING" }, "to_state": { "const": "COMPLETED" }, "reason_code": { "const": "EXECUTION_COMPLETED" }, "execution_id": { "$ref": "#/$defs/identifier" } } },
+        { "properties": { "from_state": { "const": "RUNNING" }, "to_state": { "const": "FAILED" }, "reason_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_FAILED", "WORKER_RESULT_INVALID"] }, "execution_id": { "$ref": "#/$defs/identifier" } } }
+      ]
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract"], "properties": { "relay_contract": { "const": "pixel.relay.v1" } } }
+  }
+}

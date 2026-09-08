@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixel.local/access/pixel-protected-app-intent-v1.schema.json",
+  "title": "Pixel Protected App Client Intent v1",
+  "description": "Non-authoritative browser intent. It carries no identity, trust, environment, or permission claims.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["app_id", "capability"],
+  "properties": {
+    "app_id": { "const": "pixel-bench" },
+    "capability": { "const": "launch" }
+  }
+}

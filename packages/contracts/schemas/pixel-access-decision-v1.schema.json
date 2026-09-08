@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixel.local/access/pixel-access-decision-v1.schema.json",
+  "title": "Pixel Access Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision_id", "event_name", "schema_version", "decided_at", "environment", "trace_id", "span_id", "request_id", "decision", "reason_code", "target", "owner", "policy_id", "provenance"],
+  "allOf": [
+    {
+      "if": { "properties": { "decision": { "const": "ALLOW" } }, "required": ["decision"] },
+      "then": {
+        "properties": {
+          "reason_code": { "const": "ACCESS_ALLOWED" },
+          "owner": { "properties": { "state": { "const": "Ready" } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "decision": { "const": "DENY" } }, "required": ["decision"] },
+      "then": {
+        "properties": {
+          "reason_code": { "not": { "const": "ACCESS_ALLOWED" } },
+          "owner": { "properties": { "state": { "const": "Protected" } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reason_code": {
+            "enum": ["CLIENT_AUTHORITY_CLAIM_REJECTED", "CLIENT_INTENT_INVALID", "IDENTITY_CONTEXT_UNAVAILABLE", "DEVICE_TRUST_CONTEXT_UNAVAILABLE", "ACCESS_CONTEXT_INVALID"]
+          }
+        },
+        "required": ["reason_code"]
+      },
+      "then": {
+        "properties": {
+          "request_id": { "type": "null" },
+          "policy_id": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": {
+          "request_id": { "type": "string", "minLength": 1 },
+          "policy_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "decision_id": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "event_name": { "const": "pixel.access.decision.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "decided_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "request_id": { "type": ["string", "null"], "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "decision": { "enum": ["ALLOW", "DENY"] },
+    "reason_code": { "enum": ["ACCESS_ALLOWED", "IDENTITY_NOT_VERIFIED", "DEVICE_NOT_ENROLLED", "DEVICE_REVOKED", "DEVICE_UNTRUSTED", "CERTIFICATE_NOT_VALID", "RISK_NOT_ACCEPTABLE", "APP_NOT_PERMITTED", "CLIENT_AUTHORITY_CLAIM_REJECTED", "CLIENT_INTENT_INVALID", "IDENTITY_CONTEXT_UNAVAILABLE", "DEVICE_TRUST_CONTEXT_UNAVAILABLE", "ACCESS_CONTEXT_INVALID"] },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_id", "capability"],
+      "properties": {
+        "app_id": { "const": "pixel-bench" },
+        "capability": { "const": "launch" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "summary", "impact"],
+      "properties": {
+        "state": { "enum": ["Ready", "Protected"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policy_id": { "type": ["string", "null"], "minLength": 1 },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["access_gate_contract"],
+      "properties": {
+        "access_gate_contract": { "const": "pixel.access-gate.v1" }
+      }
+    }
+  }
+}

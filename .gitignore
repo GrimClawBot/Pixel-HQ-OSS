@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+.tmp/
+.cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Runtime / logs
+*.log
+logs/
+
+# Local Pixel state
+.pixel/local/
+.pixel/secrets/
+.pixel/runtime/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Test artifacts
+playwright-report/
+test-results/

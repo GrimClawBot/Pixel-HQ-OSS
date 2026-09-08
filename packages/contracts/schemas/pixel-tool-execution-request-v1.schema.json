@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-tool-execution-request-v1.schema.json",
+  "title": "Pixel Tool Execution Request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "event_name", "schema_version", "occurred_at", "environment", "trace_id", "span_id", "job_id", "execution_id", "capability", "tool_class", "target", "parameter_hash", "worker_binding", "provenance"],
+  "properties": {
+    "request_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.tool.execution-request.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "$ref": "#/$defs/identifier" },
+    "capability": { "$ref": "#/$defs/capability" },
+    "tool_class": { "const": "pixel.system-status" },
+    "target": { "const": "pixel.platform" },
+    "parameter_hash": { "$ref": "#/$defs/hash" },
+    "worker_binding": { "$ref": "#/$defs/worker_binding" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "capability": { "enum": ["pixel.system-status.read", "pixel.system-status.raw.read"] },
+    "worker_binding": { "type": "object", "additionalProperties": false, "required": ["worker_id", "department_ref", "role_ref"], "properties": { "worker_id": { "$ref": "#/$defs/identifier" }, "department_ref": { "type": "string", "minLength": 1 }, "role_ref": { "type": "string", "minLength": 1 } } },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["tool_gateway_contract"], "properties": { "tool_gateway_contract": { "const": "pixel.tool-gateway.v1" } } }
+  }
+}

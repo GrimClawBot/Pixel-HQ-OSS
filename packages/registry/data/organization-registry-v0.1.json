@@ -1,0 +1,14 @@
+{
+  "registry_id": "pixel.organization-registry",
+  "schema_version": "0.1.0",
+  "provenance": {
+    "classification": "synthetic-public",
+    "source": "pixel.public-registry.fixture.v1"
+  },
+  "departments": [
+    {
+      "department_ref": "Infrastructure / HomeLab",
+      "roles": ["Systems"]
+    }
+  ]
+}

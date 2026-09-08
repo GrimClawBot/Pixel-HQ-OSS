@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-relay-job-envelope-v1.schema.json",
+  "title": "Pixel Relay Job Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_id", "event_name", "schema_version", "created_at", "environment", "trace_id", "span_id", "requester", "owner", "job_type", "requested_capability", "execution", "state", "idempotency", "provenance"],
+  "properties": {
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.relay.job-envelope.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "created_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "requester": { "$ref": "#/$defs/requester" },
+    "owner": { "$ref": "#/$defs/owner" },
+    "job_type": { "const": "system-status" },
+    "requested_capability": { "$ref": "#/$defs/capability" },
+    "execution": { "$ref": "#/$defs/execution" },
+    "state": { "const": "SUBMITTED" },
+    "idempotency": { "$ref": "#/$defs/idempotency" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "requested_capability": { "const": "pixel.system-status.read" },
+            "execution": { "properties": { "capability": { "const": "pixel.system-status.read" } } }
+          }
+        },
+        {
+          "properties": {
+            "requested_capability": { "const": "pixel.system-status.raw.read" },
+            "execution": { "properties": { "capability": { "const": "pixel.system-status.raw.read" } } }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "capability": { "enum": ["pixel.system-status.read", "pixel.system-status.raw.read"] },
+    "requester": { "type": "object", "additionalProperties": false, "required": ["subject_id"], "properties": { "subject_id": { "$ref": "#/$defs/identifier" } } },
+    "owner": { "type": "object", "additionalProperties": false, "required": ["department_ref", "role_ref"], "properties": { "department_ref": { "type": "string", "minLength": 1 }, "role_ref": { "type": "string", "minLength": 1 } } },
+    "worker_binding": { "type": "object", "additionalProperties": false, "required": ["worker_id", "department_ref", "role_ref"], "properties": { "worker_id": { "$ref": "#/$defs/identifier" }, "department_ref": { "type": "string", "minLength": 1 }, "role_ref": { "type": "string", "minLength": 1 } } },
+    "execution": { "type": "object", "additionalProperties": false, "required": ["capability", "tool_class", "target", "parameter_hash", "worker_binding"], "properties": { "capability": { "$ref": "#/$defs/capability" }, "tool_class": { "const": "pixel.system-status" }, "target": { "const": "pixel.platform" }, "parameter_hash": { "$ref": "#/$defs/hash" }, "worker_binding": { "$ref": "#/$defs/worker_binding" } } },
+    "idempotency": { "type": "object", "additionalProperties": false, "required": ["key", "fingerprint"], "properties": { "key": { "$ref": "#/$defs/identifier" }, "fingerprint": { "$ref": "#/$defs/hash" } } },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "context_provider_contract", "context_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "context_provider_contract": { "const": "pixel.job-context-provider.v1" }, "context_source": { "enum": ["simulator", "live"] } } }
+  }
+}

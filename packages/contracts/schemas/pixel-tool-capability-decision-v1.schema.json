@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-tool-capability-decision-v1.schema.json",
+  "title": "Pixel Tool Capability Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision_id", "event_name", "schema_version", "decided_at", "environment", "trace_id", "span_id", "request_id", "job_id", "execution_id", "capability", "tool_class", "target", "parameter_hash", "worker_binding", "decision", "reason_code", "policy_id", "provenance"],
+  "properties": {
+    "decision_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.tool.capability-decision.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "decided_at": { "type": "string", "format": "date-time" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "request_id": { "$ref": "#/$defs/identifier" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "$ref": "#/$defs/identifier" },
+    "capability": { "$ref": "#/$defs/capability" },
+    "tool_class": { "const": "pixel.system-status" },
+    "target": { "const": "pixel.platform" },
+    "parameter_hash": { "$ref": "#/$defs/hash" },
+    "worker_binding": { "$ref": "#/$defs/worker_binding" },
+    "decision": { "enum": ["ALLOW", "DENY"] },
+    "reason_code": { "enum": ["CAPABILITY_GRANTED", "CAPABILITY_NOT_GRANTED", "AUTHORIZATION_UNAVAILABLE"] },
+    "policy_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "decision": { "const": "ALLOW" } } },
+      "then": { "properties": { "reason_code": { "const": "CAPABILITY_GRANTED" }, "policy_id": { "$ref": "#/$defs/identifier" } } },
+      "else": { "properties": { "reason_code": { "enum": ["CAPABILITY_NOT_GRANTED", "AUTHORIZATION_UNAVAILABLE"] } } }
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "capability": { "enum": ["pixel.system-status.read", "pixel.system-status.raw.read"] },
+    "worker_binding": { "type": "object", "additionalProperties": false, "required": ["worker_id", "department_ref", "role_ref"], "properties": { "worker_id": { "$ref": "#/$defs/identifier" }, "department_ref": { "type": "string", "minLength": 1 }, "role_ref": { "type": "string", "minLength": 1 } } },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["tool_gateway_contract", "grant_provider_contract", "grant_source"], "properties": { "tool_gateway_contract": { "const": "pixel.tool-gateway.v1" }, "grant_provider_contract": { "const": "pixel.capability-grant-provider.v1" }, "grant_source": { "enum": ["simulator", "live"] } } }
+  }
+}

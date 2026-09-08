@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Mission Control</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/storage-card.js"></script>
+    <script type="module" src="/access-card.js"></script>
+  </head>
+  <body>
+    <main id="mission-control">
+      <header class="page-heading">
+        <p>Mission Control</p>
+        <h1>Company Pulse</h1>
+      </header>
+
+      <section aria-labelledby="infrastructure-title">
+        <div class="section-heading">
+          <h2 id="infrastructure-title">Infrastructure</h2>
+          <p>Current storage readiness, verified by Pixel.</p>
+        </div>
+        <div id="storage-card-root" aria-live="polite" aria-busy="true">
+          <p class="loading-state">Checking storage…</p>
+        </div>
+      </section>
+
+      <section class="protected-apps" aria-labelledby="protected-apps-title">
+        <div class="section-heading">
+          <h2 id="protected-apps-title">Protected apps</h2>
+          <p>Current launch access, verified by Pixel.</p>
+        </div>
+        <div id="access-card-root" aria-live="polite" aria-busy="true">
+          <p class="loading-state">Checking protected-app access…</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

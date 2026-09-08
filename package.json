@@ -1,0 +1,17 @@
+{
+  "name": "pixel-hq",
+  "version": "0.1.0-alpha",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node simulator/run-storage-scenario.js",
+    "start:degraded": "node simulator/run-storage-scenario.js --scenario=degraded-storage",
+    "check:source": "node scripts/validate-source.mjs",
+    "check": "npm run check:source && npm test",
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-job-result-v1.schema.json",
+  "title": "Pixel Job Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["result_id", "event_name", "schema_version", "completed_at", "environment", "trace_id", "span_id", "job_id", "execution_id", "state", "outcome_code", "summary", "provenance"],
+  "properties": {
+    "result_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.job.result.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "completed_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "$ref": "#/$defs/identifier" },
+    "state": { "enum": ["COMPLETED", "FAILED"] },
+    "outcome_code": { "enum": ["SYSTEM_STATUS_AVAILABLE", "CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_UNAVAILABLE", "WORKER_RESULT_INVALID"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "COMPLETED" } } },
+      "then": {
+        "properties": {
+          "outcome_code": { "const": "SYSTEM_STATUS_AVAILABLE" },
+          "provenance": {
+            "properties": {
+              "worker_contract": { "const": "pixel.system-status-worker.v1" },
+              "worker_source": { "enum": ["simulator", "live"] }
+            }
+          }
+        }
+      },
+      "else": { "properties": { "outcome_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_UNAVAILABLE", "WORKER_RESULT_INVALID"] } } }
+    },
+    {
+      "if": { "properties": { "outcome_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE"] } } },
+      "then": { "properties": { "provenance": { "properties": { "worker_contract": { "type": "null" }, "worker_source": { "type": "null" } } } } },
+      "else": { "properties": { "provenance": { "properties": { "worker_contract": { "const": "pixel.system-status-worker.v1" }, "worker_source": { "enum": ["simulator", "live"] } } } } }
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "worker_contract", "worker_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "worker_contract": { "oneOf": [{ "const": "pixel.system-status-worker.v1" }, { "type": "null" }] }, "worker_source": { "oneOf": [{ "enum": ["simulator", "live"] }, { "type": "null" }] } } }
+  }
+}

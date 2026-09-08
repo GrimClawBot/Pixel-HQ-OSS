@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixel.local/events/pixel-device-snapshot-v1.schema.json",
+  "title": "Pixel Device Snapshot Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_name",
+    "schema_version",
+    "occurred_at",
+    "environment",
+    "source",
+    "trace_id",
+    "span_id",
+    "device",
+    "owner",
+    "attention",
+    "provenance"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_name": { "const": "pixel.device.snapshot.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "source": { "enum": ["simulator", "live"] },
+    "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "role_id", "lifecycle_state", "health_state", "storage"],
+      "properties": {
+        "device_id": { "type": "string", "minLength": 1 },
+        "role_id": { "type": "string", "minLength": 1 },
+        "lifecycle_state": { "const": "active" },
+        "health_state": { "enum": ["ready", "needs_attention"] },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capacity_bytes", "used_bytes", "available_bytes", "protection_state"],
+          "properties": {
+            "capacity_bytes": { "type": "integer", "minimum": 1 },
+            "used_bytes": { "type": "integer", "minimum": 0 },
+            "available_bytes": { "type": "integer", "minimum": 0 },
+            "protection_state": { "enum": ["protected", "at_risk", "unknown"] }
+          }
+        }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "summary", "impact", "action_required", "recommended_action", "verified_at"],
+      "properties": {
+        "state": { "enum": ["Ready", "Needs Attention"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 },
+        "action_required": { "type": "boolean" },
+        "recommended_action": { "type": ["string", "null"] },
+        "verified_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "attention": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deduplication_key", "title", "summary", "owning_department", "recommended_action"],
+          "properties": {
+            "deduplication_key": { "type": "string", "minLength": 1 },
+            "title": { "type": "string", "minLength": 1 },
+            "summary": { "type": "string", "minLength": 1 },
+            "owning_department": { "type": "string", "minLength": 1 },
+            "recommended_action": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter_contract", "adapter_id", "scenario"],
+      "properties": {
+        "adapter_contract": { "const": "pixel.device.adapter.v1" },
+        "adapter_id": { "type": "string", "minLength": 1 },
+        "scenario": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
