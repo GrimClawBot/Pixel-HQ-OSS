@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-memory-record-v1.schema.json",
+  "title": "Pixel Memory Record v1",
+  "description": "Canonical server-owned stored Memory record.",
+  "$comment": "This schema provides structural and lexical validation only. The Pixel runtime validator is authoritative for NFKC/lowercase canonical tags and normalization-derived duplicate and length checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["memory_id", "event_name", "schema_version", "created_at", "observed_at", "environment", "scope", "memory_class", "handling", "lifecycle", "content", "provenance", "trace_id", "span_id"],
+  "properties": {
+    "memory_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.memory.record.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "observed_at": { "$ref": "#/$defs/timestamp" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "memory_class": { "enum": ["OPERATIONAL", "PROJECT_SAFE"] },
+    "handling": { "enum": ["INTERNAL", "RESTRICTED"] },
+    "lifecycle": { "enum": ["ACTIVE", "SUPERSEDED"] },
+    "content": { "$ref": "#/$defs/content" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "canonical_tag": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^(?:\\p{L}[\\p{L}\\p{N}]*|\\p{N}+)(?:-(?:\\p{L}[\\p{L}\\p{N}]*|\\p{N}+))*$"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope_type", "department_ref"],
+      "properties": {
+        "scope_type": { "const": "DEPARTMENT" },
+        "department_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "tags"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "tags": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/canonical_tag" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_class", "source_ref", "intake_context_contract", "intake_source"],
+      "properties": {
+        "source_class": { "$ref": "#/$defs/identifier" },
+        "source_ref": { "$ref": "#/$defs/identifier" },
+        "intake_context_contract": { "const": "pixel.memory-intake-context-provider.v1" },
+        "intake_source": { "enum": ["simulator", "live"] }
+      }
+    }
+  }
+}

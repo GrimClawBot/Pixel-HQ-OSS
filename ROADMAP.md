@@ -8,16 +8,15 @@ This roadmap is **directional**. It communicates project intent to contributors 
 
 - simulator-backed storage/device state;
 - versioned Pixel-owned contract;
-- backend projection;
-- Mission Control card;
-- degraded-state attention/evidence;
-- one data-boundary denial proof.
+- backend projection and Mission Control card;
+- deterministic degraded-state handling;
+- structured evidence and a data-boundary denial proof.
 
 ### PX-002 — Trust / Access Gate ✅
 
 - separate Identity and DeviceTrust providers;
 - deterministic protected-app Policy;
-- server-owned access decision;
+- server-owned allow/deny decision;
 - fail-closed malformed/stale/untrusted paths;
 - Mission Control presentation without client-created authority.
 
@@ -27,53 +26,52 @@ This roadmap is **directional**. It communicates project intent to contributors 
 - idempotent acceptance;
 - execution-time capability resolution;
 - deterministic simulated worker;
-- bounded job result;
-- causal evidence and completeness checks.
+- bounded result and causal evidence.
 
-## Next reviewed public export
+### PX-004 — Memory / context ✅
 
-### Memory / context packaging
+- strict Memory intake/record/context/package contracts;
+- server-owned department scope, environment, handling, lifecycle, provenance, and budget;
+- bounded iterative forged-authority scanning;
+- post-adapter copy/revalidation;
+- deterministic `environment → scope/handling → lifecycle → relevance → budget` filtering;
+- whole-record 4-item / 2,048-code-point context packaging;
+- Relay-linked evidence and trace completeness.
 
-The next public export is expected to add a bounded Memory/context slice after it is merged privately and separately passes the public-export security/review process.
+## Next Alpha direction
 
-Goals include:
+The next implementation milestone should remain separately authorized and simulator-first. Candidate areas include:
 
-- Memory as data, never authority;
-- server-owned scope/context;
-- deterministic filtering and relevance;
-- bounded context packages;
-- Relay-linked evidence;
-- simulator-first storage seams.
+- model/runtime gateway with replaceable local/cloud provider adapters;
+- binding approved context packages to workers without making the model an authority;
+- richer Mission Control owner visibility for jobs, Memory, reviews, and incidents;
+- persistent Pixel employee identities independent of model/harness sessions;
+- stronger release/recovery evidence and additional simulator-backed infrastructure domains.
 
-Nothing in this section should be read as proof that the current public tag already contains those capabilities.
+## Pixel Office direction
 
-## Later Alpha direction
+Pixel Office is planned as a **replaceable visualization of canonical Pixel state**, not an authorization system. The current design direction includes a lightweight campus, persistent Pixel employees, real badges/clearances, Access Gate-backed visible gates, and separate Infrastructure, Academy, and Quarantine layers.
 
-- model/runtime gateway with replaceable provider adapters;
-- richer Mission Control owner visibility;
-- persistent Pixel agent identities independent of model sessions;
-- more explicit review/oversight flows;
-- stronger release and recovery evidence;
-- additional simulator-backed infrastructure domains.
+The renderer must never become the source of identity, permissions, job state, Memory, or infrastructure authority.
 
 ## Beta direction
 
-Beta is intended to prove the same contracts against real infrastructure and real runtime adapters rather than simply replacing the simulator with ad-hoc production code.
+Beta is intended to prove the same contracts against real infrastructure and real runtime adapters rather than replacing the simulator with ad-hoc production code.
 
 Candidate areas include:
 
 - live device/network/storage adapters;
 - local/cloud model routing;
 - durable storage/queues where justified;
-- device enrollment/trust;
+- device enrollment/trust and revocation;
 - operational power/thermal state;
-- Pixel Office as a replaceable visualization of canonical Pixel state.
+- HomeLab digital-twin inputs for Mission Control/Pixel Office.
 
-Hardware, model, vendor, and deployment choices remain late-bound and must be re-evaluated near deployment.
+Hardware, model, vendor, and deployment choices remain late-bound and should be re-evaluated near deployment.
 
 ## What is deliberately not promised
 
-This roadmap does not promise dates, specific vendors, specific models, production security certification, multi-tenant hosting, or autonomous high-risk actions. Those require separate design and validation.
+This roadmap does not promise dates, specific vendors/models, production security certification, multi-tenant hosting, or autonomous high-risk actions. Those require separate design and validation.
 
 ## How to propose roadmap work
 
