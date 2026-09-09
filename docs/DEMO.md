@@ -44,7 +44,26 @@ npm run start:degraded
 
 Open the same local address again. The degraded scenario exercises the same contract and presentation path while changing the simulator input so failure/attention behavior can be observed deterministically.
 
-## 4. What the test suite is proving
+## 4. Follow the synthetic PX-004 Memory flow
+
+Run the focused simulator-first integration test:
+
+```bash
+node --test tests/integration/memory-vertical-slice.test.js
+```
+
+The test follows one synthetic record through the shipped PX-004 path:
+
+1. **Memory intake** accepts the bounded text `Router 7 status is stable.` and tags; it does not accept caller-supplied authority fields.
+2. **Canonical record** creation assigns the ID, timestamps, `simulation` environment, department scope, handling, lifecycle, provenance, and trace fields on the server side. The simulator store receives that complete validated record.
+3. **Relay acceptance** creates a separate canonical job whose server-owned lifecycle is `ACCEPTED`.
+4. **Context retrieval** uses that accepted job ID and the query `router 7 status`; the caller does not supply retrieval scope, authority, or budgets.
+5. **Deterministic selection** revalidates store output and applies `environment -> scope/handling -> lifecycle -> relevance -> budget` filtering. Alpha relevance and ordering are deterministic and model-free.
+6. **Bounded package** returns whole matching records only, with selection counts. The Alpha limits are four items and 2,048 Unicode code points of record text, and the package continues the accepted Relay job's trace.
+
+All values in this walkthrough are synthetic and in-memory. It demonstrates existing contracts and tests, not production storage, identity, or deployment behavior.
+
+## 5. What the test suite is proving
 
 The public suite includes contract, integration, security, UI, and evidence coverage for the completed Alpha slices. In particular, the source demonstrates that:
 
@@ -57,7 +76,7 @@ The public suite includes contract, integration, security, UI, and evidence cove
 - worker results and evidence are bounded;
 - repeated reads do not rewrite canonical execution history.
 
-## 5. Safe experimentation
+## 6. Safe experimentation
 
 Good Alpha experiments include:
 
@@ -68,7 +87,7 @@ Good Alpha experiments include:
 
 Do not expose the simulator to an untrusted network or treat its synthetic trust/identity data as production credentials.
 
-## 6. Where to read next
+## 7. Where to read next
 
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — system map and invariants
 - [`THREAT_MODEL.md`](../THREAT_MODEL.md) — public trust boundaries and threat/control matrix
