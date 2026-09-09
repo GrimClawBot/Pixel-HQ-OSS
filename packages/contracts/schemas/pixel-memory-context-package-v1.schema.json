@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-memory-context-package-v1.schema.json",
+  "title": "Pixel Memory Context Package v1",
+  "description": "Bounded model- or worker-facing Memory data with no authority fields.",
+  "$comment": "This schema provides structural and lexical validation only. The aggregate 2048 Unicode-code-point items[].text limit and remaining cross-item invariants are enforced by the Pixel runtime validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["package_id", "event_name", "schema_version", "created_at", "job_id", "environment", "items", "selection", "trace_id", "span_id"],
+  "properties": {
+    "package_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.memory.context-package.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "items": {
+      "type": "array",
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "selection": { "$ref": "#/$defs/selection" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        { "properties": { "items": { "maxItems": 0 }, "selection": { "properties": { "included_count": { "const": 0 } } } } },
+        { "properties": { "items": { "minItems": 1, "maxItems": 1 }, "selection": { "properties": { "included_count": { "const": 1 } } } } },
+        { "properties": { "items": { "minItems": 2, "maxItems": 2 }, "selection": { "properties": { "included_count": { "const": 2 } } } } },
+        { "properties": { "items": { "minItems": 3, "maxItems": 3 }, "selection": { "properties": { "included_count": { "const": 3 } } } } },
+        { "properties": { "items": { "minItems": 4, "maxItems": 4 }, "selection": { "properties": { "included_count": { "const": 4 } } } } }
+      ]
+    },
+    {
+      "oneOf": [
+        { "properties": { "selection": { "properties": { "omitted_count": { "const": 0 }, "truncated": { "const": false } } } } },
+        { "properties": { "selection": { "properties": { "omitted_count": { "minimum": 1 }, "truncated": { "const": true } } } } }
+      ]
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["memory_id", "text", "source_ref"],
+      "properties": {
+        "memory_id": { "$ref": "#/$defs/identifier" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "source_ref": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included_count", "omitted_count", "truncated"],
+      "properties": {
+        "included_count": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "omitted_count": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" }
+      }
+    }
+  }
+}

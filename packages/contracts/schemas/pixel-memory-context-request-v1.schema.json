@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-memory-context-request-v1.schema.json",
+  "title": "Pixel Memory Context Request v1",
+  "description": "Server-internal Memory request built from a canonical Relay job.",
+  "$comment": "This schema provides structural and lexical validation only. The Pixel runtime validator and Memory service are authoritative for canonical and server-owned invariants.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "event_name", "schema_version", "requested_at", "job_id", "environment", "query", "budget", "requester", "owner", "provenance"],
+  "properties": {
+    "request_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.memory.context-request.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "requested_at": { "$ref": "#/$defs/timestamp" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "query": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "budget": { "$ref": "#/$defs/budget" },
+    "requester": { "$ref": "#/$defs/requester" },
+    "owner": { "$ref": "#/$defs/owner" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_items", "max_chars"],
+      "properties": {
+        "max_items": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "max_chars": { "type": "integer", "minimum": 1, "maximum": 2048 }
+      }
+    },
+    "requester": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id"],
+      "properties": {
+        "subject_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["department_ref", "role_ref"],
+      "properties": {
+        "department_ref": { "type": "string", "minLength": 1 },
+        "role_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relay_contract", "job_trace_id"],
+      "properties": {
+        "relay_contract": { "const": "pixel.relay.v1" },
+        "job_trace_id": { "$ref": "#/$defs/trace_id" }
+      }
+    }
+  }
+}
