@@ -1,56 +1,125 @@
+<p align="center">
+  <img src="docs/assets/pixel-hq-banner.svg" alt="Pixel HQ — secure infrastructure for AI organizations" width="100%">
+</p>
+
+<p align="center">
+  <strong>Simulator-first • contract-driven • security-oriented • vendor-neutral</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/GrimClawBot/Pixel-HQ-OSS/actions/workflows/pixel-hq-ci.yml"><img alt="Pixel HQ CI" src="https://github.com/GrimClawBot/Pixel-HQ-OSS/actions/workflows/pixel-hq-ci.yml/badge.svg"></a>
+  <img alt="Node 22+" src="https://img.shields.io/badge/Node-22%2B-3c873a">
+  <img alt="License Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue">
+  <img alt="Runtime dependencies zero" src="https://img.shields.io/badge/runtime%20dependencies-0-5b5bd6">
+</p>
+
 # Pixel HQ
 
-Pixel HQ is a simulator-first, contract-driven Alpha platform for exploring secure AI-assisted operations without coupling higher layers to a hardware vendor, model provider, or workflow framework.
+**Pixel HQ is a secure operating layer for AI-assisted organizations.** The public Alpha proves that identity, device trust, jobs, tool execution, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
 
-The current public-safe source demonstrates three completed vertical slices:
+This repository is a **public-safe Alpha architecture proof**. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
 
-1. **PX-001 — device state:** a simulated storage device emits the same versioned contract a future live adapter would use; backend projection drives one Mission Control card, attention deduplication, Policy denial, and structured evidence.
-2. **PX-002 — trust/access:** separate simulated identity and device-trust providers feed a deterministic backend Access Gate. Mission Control presents the result and cannot turn client claims into authority.
-3. **PX-003 — job execution:** Relay atomically owns canonical job identity and lifecycle, Tool Gateway resolves execution-time capability authority, and one deterministic worker produces a bounded result with causal evidence.
+## Why Pixel HQ is different
 
-These are architecture proofs, not production authentication, PKI, infrastructure administration, recovery, or autonomous agent systems.
+- **Models are runtimes, not identities.** A model or coding harness can be replaced without redefining the organizational boundary.
+- **Clients are not authority.** Identity, trust, ownership, lifecycle, grants, and tool permissions are resolved server-side.
+- **Tools are capability-gated.** Execution authority is checked at the Tool Gateway rather than inferred from agent intent.
+- **Simulation comes first.** Hardware-facing behavior is proven against replaceable simulator/live-shaped seams before production adapters exist.
+- **Evidence is part of the design.** Material state changes and security decisions are structured so they can be reviewed and reconstructed.
 
-## Requirements and quick start
+## What works today
 
-- Node.js 22 or newer
-- Git for contribution workflows; no runtime dependencies are required
+| Slice | What it proves | Status |
+| --- | --- | --- |
+| **PX-001 — Device state** | Simulator → versioned device contract → backend projection → Mission Control, including degraded-state evidence | ✅ Public Alpha |
+| **PX-002 — Trust / access** | Separate Identity + DeviceTrust inputs → deterministic Access Gate → protected-app decision; browser claims never become authority | ✅ Public Alpha |
+| **PX-003 — Job execution** | Atomic Relay lifecycle → execution-time Tool Gateway decision → deterministic worker → bounded result + causal evidence | ✅ Public Alpha |
+
+The next reviewed public export is expected to add the Memory/context slice only after it passes the same owner-gated export process. Roadmap direction is not implementation authorization.
+
+## Try Pixel HQ in 60 seconds
+
+Requirements: **Node.js 22+** and Git. There are **no third-party runtime dependencies**.
 
 ```bash
-npm run check:source
-npm test
+git clone https://github.com/GrimClawBot/Pixel-HQ-OSS.git
+cd Pixel-HQ-OSS
+npm run check
 npm start
 ```
 
-Open `http://127.0.0.1:4173` for the healthy simulation. Run `npm run start:degraded` for the deterministic degraded-storage path. Set `PIXEL_HOST` or `PIXEL_PORT` only for local development; no production exposure is configured or implied.
+Open `http://127.0.0.1:4173`.
 
-## Architectural guarantees demonstrated
+Want to see the system handle a deterministic failure path?
 
-- Pixel-owned, versioned JSON contracts validate canonical device, access, job, transition, tool-decision, execution, and result data.
-- Simulator and live-shaped implementations share adapter interfaces.
-- Client-supplied identity, trust, grant, lifecycle, and worker claims fail closed.
-- A valid identity cannot bypass an untrusted or revoked device.
-- Cross-department raw-data access is denied by a backend Policy proof.
-- Relay idempotency is atomic and a canonical job can invoke at most one worker.
-- Repeated API reads branch from stable canonical evidence instead of changing execution history.
-- Result summaries and evidence are bounded and exclude arbitrary tool output.
+```bash
+npm run start:degraded
+```
 
-## Alpha limits
+See [`docs/DEMO.md`](docs/DEMO.md) for the guided healthy/degraded walkthrough.
 
-State, evidence, jobs, and idempotency records are in-memory and reset when the process stops. There is no production identity/PKI, secret vault, durable queue, broker, retry/recovery protocol, scheduler, real hardware adapter, production network exposure, or continuously running LLM agent. The simulated Registry is a minimal public fixture, not an organizational authority or production roster.
+<p align="center">
+  <img src="docs/assets/mission-control-alpha.svg" alt="Illustrative map of the current Mission Control Alpha surface" width="92%">
+</p>
 
-## Repository guide
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    C[Client / Mission Control] --> A[Access Gate]
+    A --> R[Pixel Relay]
+    R --> T[Tool Gateway]
+    T --> W[Deterministic Worker]
+
+    I[Identity Provider] --> A
+    D[DeviceTrust Provider] --> A
+    P[Pixel Policy] --> A
+    P --> T
+    G[Synthetic Registry] --> R
+
+    A --> E[Structured Evidence]
+    R --> E
+    T --> E
+    W --> E
+
+    S[Simulator Adapters] -. same Pixel-owned seams .-> A
+    S -.-> R
+    S -.-> W
+```
+
+The important rule is simple: **authority flows through Pixel services; model/client content is data.**
+
+For a deeper explanation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Security by construction
+
+The public Alpha includes explicit tests for fail-closed behavior, forged authority, cross-department data boundaries, invalid or revoked device trust, Relay idempotency, bounded tool results, and evidence completeness.
+
+Read [`THREAT_MODEL.md`](THREAT_MODEL.md) for the public trust boundaries and threat/control matrix, and [`SECURITY.md`](SECURITY.md) before reporting a vulnerability.
+
+## Project map
 
 - `adapters/simulator/` — deterministic Alpha providers and workers
-- `packages/contracts/` — versioned contracts and schemas
-- `packages/adapter-sdk/` — replaceable boundary validation
+- `packages/contracts/` — versioned contracts and JSON Schemas
+- `packages/adapter-sdk/` — replaceable runtime boundaries
 - `packages/registry/` — synthetic public composition fixture
 - `packages/telemetry/` — structured evidence and completeness checks
 - `services/` — device projection, Policy, Access Gate, Relay, and Tool Gateway
 - `apps/mission-control/` — lightweight presentation and local composition
 - `tests/` — contract, integration, security, UI, and evidence coverage
-- `docs/` — public architecture summaries
+- `docs/` — public architecture and demo documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [docs/README.md](docs/README.md) before contributing.
+## Project direction
+
+See [`ROADMAP.md`](ROADMAP.md). It separates **shipped public Alpha**, **next reviewed exports**, and **later direction** so future ideas are not mistaken for current functionality.
+
+## Contributing and support
+
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SUPPORT.md`](SUPPORT.md). Security-sensitive reports belong through the process in [`SECURITY.md`](SECURITY.md), not a public exploit issue.
+
+## Release history
+
+See [`CHANGELOG.md`](CHANGELOG.md). The current repository package version is `0.1.0-alpha`; GitHub release tags remain maintainer-gated.
 
 ## License
 

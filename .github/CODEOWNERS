@@ -1,0 +1,10 @@
+# Public-safe ownership map
+* @GrimClawBot
+
+# Security-sensitive surfaces remain maintainer-reviewed.
+/services/ @GrimClawBot
+/packages/contracts/ @GrimClawBot
+/packages/telemetry/ @GrimClawBot
+/.github/workflows/ @GrimClawBot
+/SECURITY.md @GrimClawBot
+/THREAT_MODEL.md @GrimClawBot
