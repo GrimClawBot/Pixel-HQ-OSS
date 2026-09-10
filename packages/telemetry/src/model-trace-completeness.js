@@ -204,6 +204,23 @@ function semantics(records, errors) {
         : 'WORKER_UNAVAILABLE';
     if (projected !== expectedProjection) errors.push('Gateway outcome contradicts the terminal projection');
 
+    const inputBudget = attrs('model.input_budget.checked')?.['pixel.model.reason_code'];
+    const expectedInputBudget = ({
+      EMPTY_CONTEXT: 'EMPTY_CONTEXT',
+      INPUT_BUDGET_EXCEEDED: 'INPUT_BUDGET_EXCEEDED',
+    })[createdReason] ?? (
+      ['OPERATION_INELIGIBLE', 'ROUTE_UNSUPPORTED'].includes(createdReason)
+        ? undefined
+        : 'INPUT_BUDGET_ALLOWED'
+    );
+    if (expectedInputBudget !== undefined && inputBudget !== expectedInputBudget) {
+      errors.push('input-budget evidence contradicts the Gateway outcome');
+    }
+    if (records.some(({ event_name: name }) => name === 'model.provider.invocation_started')
+      && inputBudget !== 'INPUT_BUDGET_ALLOWED') {
+      errors.push('provider invocation requires an allowed input budget');
+    }
+
     const outputBudget = attrs('model.output_budget.checked')?.['pixel.model.reason_code'];
     const expectedBudget = ({
       MODEL_OUTPUT_AVAILABLE: 'OUTPUT_BUDGET_ALLOWED',

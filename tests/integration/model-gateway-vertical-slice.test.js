@@ -456,4 +456,13 @@ test('successful model execution produces one complete bounded causal evidence f
   createdOutcome.outcome = 'failure';
   createdOutcome.severity = 'warning';
   assert.equal(assessModelTraceCompleteness(contradictoryDisposition).complete, false);
+
+  const deniedInputWithProvider = structuredClone(records);
+  const inputBudget = deniedInputWithProvider.find(({ event_name: eventName }) => (
+    eventName === 'model.input_budget.checked'
+  ));
+  inputBudget.attributes['pixel.model.reason_code'] = 'INPUT_BUDGET_EXCEEDED';
+  inputBudget.outcome = 'denied';
+  inputBudget.severity = 'warning';
+  assert.equal(assessModelTraceCompleteness(deniedInputWithProvider).complete, false);
 });
