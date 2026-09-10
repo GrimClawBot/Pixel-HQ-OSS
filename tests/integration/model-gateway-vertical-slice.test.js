@@ -14,6 +14,8 @@ import {
   hashMemoryContextPackageBinding,
 } from '../../packages/contracts/src/model-v1.js';
 import { EvidenceRecorder } from '../../packages/telemetry/src/evidence-recorder.js';
+import { assessJobTraceCompleteness } from '../../packages/telemetry/src/job-trace-completeness.js';
+import { assessModelTraceCompleteness } from '../../packages/telemetry/src/model-trace-completeness.js';
 import { ModelGateway } from '../../services/model-gateway/src/model-gateway.js';
 import { MemoryService } from '../../services/memory/src/memory-service.js';
 import { RelayService } from '../../services/relay/src/relay-service.js';
@@ -274,6 +276,7 @@ test('raw capability and empty package become Relay-owned WORKER_FAILED terminal
     assert.equal(response.job.result.outcome_code, 'WORKER_UNAVAILABLE');
     assert.equal(response.job.transitions.at(-1).reason_code, 'WORKER_FAILED');
     assert.equal(runtime.evidence.forTrace(response.trace_id).some(({ event_name }) => event_name === 'model.provider.invocation_started'), false);
+    assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
   }
 });
 
@@ -289,6 +292,7 @@ test('malformed Gateway outcome becomes FAILED / WORKER_RESULT_INVALID after RUN
   assert.equal(response.job.result.outcome_code, 'WORKER_RESULT_INVALID');
   assert.equal(response.job.transitions.at(-1).reason_code, 'WORKER_RESULT_INVALID');
   assert.equal(response.model_output, null);
+  assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
 });
 
 test('concurrent model execution attempts claim and invoke one canonical invocation', async () => {
@@ -300,4 +304,24 @@ test('concurrent model execution attempts claim and invoke one canonical invocat
   assert.equal(responses.filter(({ disposition }) => disposition === 'COMPLETED').length, 1);
   assert.equal(runtime.evidence.forTrace(accepted.trace_id)
     .filter(({ event_name }) => event_name === 'model.provider.invocation_started').length, 1);
+});
+
+test('successful model execution produces one complete bounded causal evidence family', async () => {
+  const runtime = modelRelayRuntime();
+  const accepted = await runtime.prepare();
+  const response = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+  const records = runtime.evidence.forTrace(response.trace_id);
+
+  assert.deepEqual(assessModelTraceCompleteness(records), { complete: true, missing: [], errors: [] });
+  assert.deepEqual(assessJobTraceCompleteness(records), { complete: true, missing: [], errors: [] });
+  assert.equal(JSON.stringify(records).includes('System status stable.'), false);
+  assert.equal(JSON.stringify(records).includes(response.model_output.text), false);
+
+  const leaked = structuredClone(records);
+  leaked.find(({ event_name }) => event_name === 'model.provider.result_validated').attributes.output_text = 'leak';
+  assert.equal(assessModelTraceCompleteness(leaked).complete, false);
+
+  const mixed = structuredClone(records);
+  mixed.push({ ...mixed.at(-1), span_id: 'ffffffffffffffff', event_name: 'worker.execution.started' });
+  assert.equal(assessModelTraceCompleteness(mixed).complete, false);
 });
