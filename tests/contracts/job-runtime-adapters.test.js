@@ -5,6 +5,7 @@ import { SimulatorJobContextProvider } from '../../adapters/simulator/src/job-co
 import {
   assertCapabilityGrantProvider,
   assertJobContextProvider,
+  assertModelRelayStoreAdapter,
   assertRelayStoreAdapter,
   assertSystemStatusWorker,
   validateCapabilityAuthorizationContext,
@@ -156,4 +157,23 @@ test('adapter SDK accepts independent live-shaped implementations', () => {
     commitTerminalResult() {},
   }).source, 'live');
   assert.equal(assertSystemStatusWorker({ source: 'live', execute() {} }).source, 'live');
+  assert.equal(assertModelRelayStoreAdapter({
+    source: 'live',
+    claimOrReturnExisting() {},
+    getJob() {},
+    applyTransition() {},
+    recordGatewayDecision() {},
+    claimWorkerInvocation() {},
+    claimModelInvocation() {},
+    commitTerminalResult() {},
+  }).source, 'live');
+  assert.throws(() => assertModelRelayStoreAdapter({
+    source: 'live',
+    claimOrReturnExisting() {},
+    getJob() {},
+    applyTransition() {},
+    recordGatewayDecision() {},
+    claimWorkerInvocation() {},
+    commitTerminalResult() {},
+  }), /claimModelInvocation/);
 });

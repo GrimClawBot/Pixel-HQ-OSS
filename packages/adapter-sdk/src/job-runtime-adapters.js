@@ -76,6 +76,14 @@ export function assertRelayStoreAdapter(value) {
   return value;
 }
 
+export function assertModelRelayStoreAdapter(value) {
+  assertRelayStoreAdapter(value);
+  if (typeof value.claimModelInvocation !== 'function') {
+    throw new TypeError('Model Relay store adapter must implement claimModelInvocation');
+  }
+  return value;
+}
+
 export function validateJobContext(value) {
   const errors = [];
   if (!isRecord(value)) return { ok: false, errors: ['job context must be an object'] };
