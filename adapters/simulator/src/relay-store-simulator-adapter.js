@@ -127,6 +127,7 @@ export class SimulatorRelayStoreAdapter {
       executionRequest: null,
       gatewayDecision: null,
       invocationClaimed: false,
+      modelContextClaimed: false,
       modelInvocation: null,
       modelInvocationClaimed: false,
       result: null,
@@ -173,6 +174,7 @@ export class SimulatorRelayStoreAdapter {
       !job
       || job.currentState !== 'RUNNING'
       || job.gatewayDecision !== null
+      || job.modelContextClaimed
       || job.modelInvocation !== null
       || !validateToolExecutionRequestV1(request).ok
       || !validateToolCapabilityDecisionV1(decision).ok
@@ -204,6 +206,21 @@ export class SimulatorRelayStoreAdapter {
     if (job.invocationClaimed) return { disposition: 'ALREADY_CLAIMED', job: projection(job) };
     job.invocationClaimed = true;
     return { disposition: 'INVOKE_NOW', job: projection(job) };
+  }
+
+  claimModelContextPreparation(jobId) {
+    const job = this.#jobs.get(jobId);
+    if (
+      !job
+      || job.currentState !== 'ACCEPTED'
+      || job.gatewayDecision !== null
+      || job.invocationClaimed
+      || job.modelInvocation !== null
+    ) return { disposition: 'REJECTED', job: projection(job) };
+
+    if (job.modelContextClaimed) return { disposition: 'ALREADY_CLAIMED', job: projection(job) };
+    job.modelContextClaimed = true;
+    return { disposition: 'PREPARE_NOW', job: projection(job) };
   }
 
   claimModelInvocation(jobId, invocation) {

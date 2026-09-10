@@ -167,6 +167,7 @@ test('adapter SDK accepts independent live-shaped implementations', () => {
     applyTransition() {},
     recordGatewayDecision() {},
     claimWorkerInvocation() {},
+    claimModelContextPreparation() {},
     claimModelInvocation() {},
     commitTerminalResult() {},
   }).source, 'live');
@@ -177,6 +178,7 @@ test('adapter SDK accepts independent live-shaped implementations', () => {
     applyTransition() {},
     recordGatewayDecision() {},
     claimWorkerInvocation() {},
+    claimModelInvocation() {},
     commitTerminalResult() {},
-  }), /claimModelInvocation/);
+  }), /claimModelContextPreparation/);
 });

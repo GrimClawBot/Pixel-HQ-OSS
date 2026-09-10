@@ -185,7 +185,7 @@ function relayIds(seed = 20_000) {
   };
 }
 
-function modelRelayRuntime({ capability = 'pixel.system-status.read', gatewayOverride, withMemory = true } = {}) {
+function modelRelayRuntime({ capability = 'pixel.system-status.read', gatewayOverride, withMemory = true, adapters } = {}) {
   const allIds = relayIds();
   const evidence = new EvidenceRecorder({ clock: () => NOW });
   const store = new SimulatorRelayStoreAdapter();
@@ -206,7 +206,7 @@ function modelRelayRuntime({ capability = 'pixel.system-status.read', gatewayOve
     environment: 'simulation',
     store: gatewayStore,
     memory,
-    adapters: [new FakeModelASimulatorAdapter(), new FakeModelBSimulatorAdapter()],
+    adapters: adapters ?? [new FakeModelASimulatorAdapter(), new FakeModelBSimulatorAdapter()],
     evidence,
     ids: allIds,
     clock: () => NOW,
@@ -381,6 +381,31 @@ test('concurrent model execution attempts claim and invoke one canonical invocat
   assert.equal(responses.filter(({ disposition }) => disposition === 'COMPLETED').length, 1);
   assert.equal(runtime.evidence.forTrace(accepted.trace_id)
     .filter(({ event_name }) => event_name === 'model.provider.invocation_started').length, 1);
+  assert.equal(runtime.evidence.forTrace(accepted.trace_id)
+    .filter(({ event_name }) => event_name === 'memory.context.package_created').length, 1);
+  assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(accepted.trace_id)).complete, true);
+});
+
+test('over-budget provider output produces a complete failed evidence family', async () => {
+  const output = 'word '.repeat(65).trim();
+  const adapter = {
+    source: 'simulator', providerContract: 'pixel.model-runtime.adapter.v1',
+    runtimeId: 'pixel.simulator.model-runtime-a', modelId: 'pixel.fake-model-a.v1',
+    invoke(request) {
+      return {
+        provider_result_id: 'provider-result-over-budget', schema_version: '1.0.0',
+        invocation_id: request.invocation_id, provider_contract: this.providerContract,
+        runtime_id: this.runtimeId, model_id: this.modelId, source: this.source,
+        status: 'OUTPUT_AVAILABLE', output_text: output, output_token_units: 65,
+      };
+    },
+  };
+  const runtime = modelRelayRuntime({ adapters: [adapter] });
+  const accepted = await runtime.prepare();
+  const response = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+
+  assert.equal(response.job.result.outcome_code, 'WORKER_RESULT_INVALID');
+  assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
 });
 
 test('successful model execution produces one complete bounded causal evidence family', async () => {
@@ -413,6 +438,16 @@ test('successful model execution produces one complete bounded causal evidence f
     eventName === 'model.gateway.outcome_created'
   )).parent_span_id = providerStarted.span_id;
   assert.equal(assessModelTraceCompleteness(missingSuccessProof).complete, false);
+
+  const forgedFailureWithinSuccess = structuredClone(missingSuccessProof);
+  const forgedCreated = forgedFailureWithinSuccess.find(({ event_name: eventName }) => (
+    eventName === 'model.gateway.outcome_created'
+  ));
+  forgedCreated.attributes['pixel.model.status'] = 'FAILED';
+  forgedCreated.attributes['pixel.model.reason_code'] = 'ADAPTER_UNAVAILABLE';
+  forgedCreated.outcome = 'failure';
+  forgedCreated.severity = 'warning';
+  assert.equal(assessModelTraceCompleteness(forgedFailureWithinSuccess).complete, false);
 
   const contradictoryDisposition = structuredClone(records);
   const createdOutcome = contradictoryDisposition.find(({ event_name: eventName }) => (

@@ -82,8 +82,9 @@ export function assertModelJobLookupAdapter(value) {
 
 export function assertModelRelayStoreAdapter(value) {
   assertRelayStoreAdapter(value);
-  if (typeof value.claimModelInvocation !== 'function') {
-    throw new TypeError('Model Relay store adapter must implement claimModelInvocation');
+  const methods = ['claimModelContextPreparation', 'claimModelInvocation'];
+  if (methods.some((method) => typeof value[method] !== 'function')) {
+    throw new TypeError(`Model Relay store adapter must implement ${methods.join(', ')}`);
   }
   return value;
 }

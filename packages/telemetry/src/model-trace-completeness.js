@@ -1,6 +1,10 @@
 const TRACE_ID = /^(?!0{32}$)[0-9a-f]{32}$/;
 const SPAN_ID = /^(?!0{16}$)[0-9a-f]{16}$/;
 const MAX_ERRORS = 32;
+const GATEWAY_FAILURE_REASONS = new Set([
+  'OPERATION_INELIGIBLE', 'ROUTE_UNSUPPORTED', 'EMPTY_CONTEXT', 'INPUT_BUDGET_EXCEEDED',
+  'ADAPTER_UNAVAILABLE', 'PROVIDER_RESULT_INVALID', 'OUTPUT_BUDGET_EXCEEDED',
+]);
 
 const RULES = new Map([
   ['job.submission.received', ['pixel.relay', ['pixel.environment', 'pixel.relay.contract']]],
@@ -115,6 +119,8 @@ function expectedSignal(record) {
       return value('pixel.model.route_decision') === 'ROUTE' ? ['success', 'info'] : ['denied', 'warning'];
     case 'model.input_budget.checked':
       return value('pixel.model.reason_code') === 'INPUT_BUDGET_ALLOWED' ? ['success', 'info'] : ['denied', 'warning'];
+    case 'model.output_budget.checked':
+      return value('pixel.model.reason_code') === 'OUTPUT_BUDGET_ALLOWED' ? ['success', 'info'] : ['denied', 'warning'];
     case 'model.gateway.outcome_created':
     case 'model.gateway.outcome_accepted':
       return value('pixel.model.status') === 'SUCCEEDED' ? ['success', 'info'] : ['failure', 'warning'];
@@ -177,6 +183,40 @@ function semantics(records, errors) {
   const projected = attrs('job.result.projected')?.['pixel.job.outcome_code'];
   const validated = attrs('contract.job_result.validated')?.['pixel.job.outcome_code'];
   if (projected !== validated) errors.push('validated and projected model outcomes disagree');
+  const createdOutcome = attrs('model.gateway.outcome_created');
+  const acceptedOutcome = attrs('model.gateway.outcome_accepted');
+  if (createdOutcome && acceptedOutcome) {
+    const createdStatus = createdOutcome['pixel.model.status'];
+    const acceptedStatus = acceptedOutcome['pixel.model.status'];
+    const createdReason = createdOutcome['pixel.model.reason_code'];
+    const acceptedReason = acceptedOutcome['pixel.model.reason_code'];
+    if (createdStatus !== acceptedStatus || createdReason !== acceptedReason) {
+      errors.push('created and accepted Gateway outcomes disagree');
+    }
+    if (!(
+      (createdStatus === 'SUCCEEDED' && createdReason === 'MODEL_OUTPUT_AVAILABLE')
+      || (createdStatus === 'FAILED' && GATEWAY_FAILURE_REASONS.has(createdReason))
+    )) errors.push('Gateway outcome status and reason are invalid');
+    const expectedProjection = createdStatus === 'SUCCEEDED' && createdReason === 'MODEL_OUTPUT_AVAILABLE'
+      ? 'SYSTEM_STATUS_AVAILABLE'
+      : ['PROVIDER_RESULT_INVALID', 'OUTPUT_BUDGET_EXCEEDED'].includes(createdReason)
+        ? 'WORKER_RESULT_INVALID'
+        : 'WORKER_UNAVAILABLE';
+    if (projected !== expectedProjection) errors.push('Gateway outcome contradicts the terminal projection');
+
+    const outputBudget = attrs('model.output_budget.checked')?.['pixel.model.reason_code'];
+    const expectedBudget = ({
+      MODEL_OUTPUT_AVAILABLE: 'OUTPUT_BUDGET_ALLOWED',
+      OUTPUT_BUDGET_EXCEEDED: 'OUTPUT_BUDGET_EXCEEDED',
+      PROVIDER_RESULT_INVALID: 'PROVIDER_RESULT_INVALID',
+    })[createdReason];
+    if (outputBudget !== undefined && outputBudget !== expectedBudget) {
+      errors.push('output-budget evidence contradicts the Gateway outcome');
+    }
+  }
+  if (attrs('model.gateway.outcome_rejected') && projected !== 'WORKER_RESULT_INVALID') {
+    errors.push('rejected Gateway outcome must project an invalid worker result');
+  }
   const terminal = attrs('relay.job.completed') ?? attrs('relay.job.failed');
   if (terminal) {
     const expectedReason = projected === 'SYSTEM_STATUS_AVAILABLE'

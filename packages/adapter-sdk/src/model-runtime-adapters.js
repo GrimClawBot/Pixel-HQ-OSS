@@ -11,6 +11,8 @@ const SAFE_DATA_MAX_DEPTH = 16;
 const SAFE_DATA_MAX_NODES = 128;
 const SAFE_DATA_MAX_KEYS = 256;
 const SAFE_DATA_MAX_KEYS_PER_OBJECT = 64;
+const SAFE_DATA_MAX_ARRAY_LENGTH = 64;
+const SAFE_DATA_MAX_PROPERTY_NAME_CODE_UNITS = 160;
 const SAFE_DATA_MAX_STRING_CODE_UNITS = 4096;
 
 function visitPlainData(value, ancestors, state, depth) {
@@ -31,15 +33,25 @@ function visitPlainData(value, ancestors, state, depth) {
     throw new TypeError('Adapter data must be safe plain data');
   }
   ancestors.add(value);
-  const descriptors = Object.getOwnPropertyDescriptors(value);
-  const keys = Reflect.ownKeys(descriptors);
+  const keys = Reflect.ownKeys(value);
   state.keys += keys.length;
   if (keys.length > SAFE_DATA_MAX_KEYS_PER_OBJECT || state.keys > SAFE_DATA_MAX_KEYS) {
     throw new TypeError('Adapter data must be safe plain data');
   }
+  if (Array.isArray(value)) {
+    const length = Object.getOwnPropertyDescriptor(value, 'length')?.value;
+    const elementKeys = keys.filter((key) => key !== 'length');
+    if (!Number.isSafeInteger(length) || length > SAFE_DATA_MAX_ARRAY_LENGTH
+      || elementKeys.length !== length
+      || elementKeys.some((key, index) => key !== String(index))) {
+      throw new TypeError('Adapter data must be safe plain data');
+    }
+  }
   for (const key of keys) {
     if (typeof key === 'symbol') throw new TypeError('Adapter data must be safe plain data');
-    const descriptor = descriptors[key];
+    if (key.length > SAFE_DATA_MAX_PROPERTY_NAME_CODE_UNITS) throw new TypeError('Adapter data must be safe plain data');
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor) throw new TypeError('Adapter data must be safe plain data');
     if ('get' in descriptor || 'set' in descriptor) throw new TypeError('Adapter data must be safe plain data');
     if (key !== 'length') visitPlainData(descriptor.value, ancestors, state, depth + 1);
   }

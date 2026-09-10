@@ -14,7 +14,7 @@ The only operation is `SYSTEM_STATUS_SUMMARY`. Callers cannot supply prompt text
 
 ## Ownership and order
 
-1. Relay resolves an ACCEPTED canonical job.
+1. Relay resolves an ACCEPTED canonical job and atomically reserves its one model-context preparation attempt. This reservation queues or retries nothing.
 2. Memory constructs and registers an immutable approved package using the fixed query `system status`.
 3. Relay applies the canonical `ACCEPTED → RUNNING` transition.
 4. Relay creates the canonical immutable model invocation and atomically claims it in the Relay store.
@@ -83,7 +83,7 @@ Fake Model A and Fake Model B are independent deterministic adapters. Each retur
 
 ## Relay store and terminal compatibility
 
-The store adds an atomic model-invocation claim bound to the RUNNING job and exact execution tuple. It permits one immutable invocation and excludes simultaneous PX-003 Tool Gateway decision/worker claims. Terminal commit accepts exactly one of two mutually exclusive evidence paths:
+The store adds an atomic pre-context reservation for one accepted model execution attempt plus an atomic model-invocation claim bound to the RUNNING job and exact execution tuple. These are fail-closed ownership claims, not a queue or scheduler. They prevent duplicate Memory packages under concurrent calls, permit one immutable invocation, and exclude simultaneous PX-003 Tool Gateway decision/worker claims. Terminal commit accepts exactly one of two mutually exclusive evidence paths:
 
 - unchanged PX-003 Tool Gateway decision plus worker invocation claim; or
 - PX-005 claimed model invocation plus model-backed result provenance bound to that invocation.

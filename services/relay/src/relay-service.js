@@ -586,6 +586,16 @@ export class RelayService {
       return frozenCopy({ disposition: 'INVALID_STATE', job, model_output: null, trace_id: job?.envelope.trace_id ?? null });
     }
 
+    const preparation = await this.#store.claimModelContextPreparation(jobId);
+    if (preparation.disposition !== 'PREPARE_NOW') {
+      return frozenCopy({
+        disposition: preparation.disposition === 'ALREADY_CLAIMED' ? 'INVALID_STATE' : 'UNAVAILABLE',
+        job: preparation.job,
+        model_output: null,
+        trace_id: job.envelope.trace_id,
+      });
+    }
+
     let context;
     try {
       context = await this.#memory.buildContext({ job_id: jobId, query: 'system status' });

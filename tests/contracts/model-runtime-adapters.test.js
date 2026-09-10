@@ -61,6 +61,8 @@ test('safe snapshot rejects accessors, exotic prototypes, cycles, symbols, and u
     Array.from({ length: 65 }, (_, index) => [`field_${index}`, index]),
   )), /plain data/);
   assert.throws(() => assertSafePlainData({ value: 'x'.repeat(4097) }), /plain data/);
+  assert.throws(() => assertSafePlainData(new Array(1_000_000_000)), /plain data/);
+  assert.throws(() => assertSafePlainData({ ['x'.repeat(100_000)]: true }), /plain data/);
 });
 
 test('provider result snapshot validates the exact isolated bytes', () => {
