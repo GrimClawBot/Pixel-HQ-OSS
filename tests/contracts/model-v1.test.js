@@ -189,6 +189,17 @@ test('route and outcome cross-field invariants fail closed', () => {
     output: null,
   };
   assert.deepEqual(validateModelGatewayOutcomeV1(failed), { ok: true, errors: [] });
+  assert.deepEqual(validateModelGatewayOutcomeV1({
+    ...failed,
+    reason_code: 'OPERATION_INELIGIBLE',
+    route_decision_id: null,
+    placement: null,
+  }), { ok: true, errors: [] });
+  assert.equal(validateModelGatewayOutcomeV1({
+    ...failed,
+    reason_code: 'ROUTE_UNSUPPORTED',
+    route_decision_id: null,
+  }).ok, false);
 });
 
 test('canonical binding rules are deterministic and order object keys only', () => {

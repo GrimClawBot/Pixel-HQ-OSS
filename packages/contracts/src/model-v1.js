@@ -291,10 +291,10 @@ export function validateModelGatewayOutcomeV1(value) {
   identifier(value.job_id, 'job_id', errors);
   identifier(value.execution_id, 'execution_id', errors);
   identifier(value.invocation_id, 'invocation_id', errors);
-  identifier(value.route_decision_id, 'route_decision_id', errors);
   if (value.operation !== 'SYSTEM_STATUS_SUMMARY') errors.push('operation must equal SYSTEM_STATUS_SUMMARY');
   if (!['SUCCEEDED', 'FAILED'].includes(value.status)) errors.push('status must be SUCCEEDED or FAILED');
   if (value.status === 'SUCCEEDED') {
+    identifier(value.route_decision_id, 'route_decision_id', errors);
     if (value.reason_code !== 'MODEL_OUTPUT_AVAILABLE') errors.push('success reason must equal MODEL_OUTPUT_AVAILABLE');
     validatePlacement(value.placement, errors);
     record(value.output, OUTPUT_FIELDS, 'output', errors, (output) => {
@@ -306,6 +306,11 @@ export function validateModelGatewayOutcomeV1(value) {
     if (!FAILURE_REASONS.has(value.reason_code)) errors.push('failure reason is unsupported');
     if (value.output !== null) errors.push('failed outcome must have null output');
     if (value.placement !== null) validatePlacement(value.placement, errors);
+    if (value.reason_code === 'OPERATION_INELIGIBLE') {
+      if (value.route_decision_id !== null || value.placement !== null) {
+        errors.push('ineligible operation must precede routing');
+      }
+    } else identifier(value.route_decision_id, 'route_decision_id', errors);
   }
   record(value.context, OUTCOME_CONTEXT_FIELDS, 'context', errors, (context) => {
     identifier(context.package_id, 'context.package_id', errors);
