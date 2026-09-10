@@ -18,28 +18,22 @@
     "state": { "enum": ["COMPLETED", "FAILED"] },
     "outcome_code": { "enum": ["SYSTEM_STATUS_AVAILABLE", "CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_UNAVAILABLE", "WORKER_RESULT_INVALID"] },
     "summary": { "type": "string", "minLength": 1, "maxLength": 160 },
-    "provenance": { "$ref": "#/$defs/provenance" }
+    "provenance": { "oneOf": [{ "$ref": "#/$defs/worker_provenance" }, { "$ref": "#/$defs/model_provenance" }] }
   },
   "allOf": [
     {
       "if": { "properties": { "state": { "const": "COMPLETED" } } },
       "then": {
         "properties": {
-          "outcome_code": { "const": "SYSTEM_STATUS_AVAILABLE" },
-          "provenance": {
-            "properties": {
-              "worker_contract": { "const": "pixel.system-status-worker.v1" },
-              "worker_source": { "enum": ["simulator", "live"] }
-            }
-          }
+          "outcome_code": { "const": "SYSTEM_STATUS_AVAILABLE" }
         }
       },
       "else": { "properties": { "outcome_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE", "WORKER_UNAVAILABLE", "WORKER_RESULT_INVALID"] } } }
     },
     {
       "if": { "properties": { "outcome_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE"] } } },
-      "then": { "properties": { "provenance": { "properties": { "worker_contract": { "type": "null" }, "worker_source": { "type": "null" } } } } },
-      "else": { "properties": { "provenance": { "properties": { "worker_contract": { "const": "pixel.system-status-worker.v1" }, "worker_source": { "enum": ["simulator", "live"] } } } } }
+      "then": { "properties": { "provenance": { "$ref": "#/$defs/denied_worker_provenance" } } },
+      "else": { "properties": { "provenance": { "oneOf": [{ "$ref": "#/$defs/executed_worker_provenance" }, { "$ref": "#/$defs/model_provenance" }] } } }
     }
   ],
   "$defs": {
@@ -47,6 +41,24 @@
     "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
     "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
     "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
-    "provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "worker_contract", "worker_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "worker_contract": { "oneOf": [{ "const": "pixel.system-status-worker.v1" }, { "type": "null" }] }, "worker_source": { "oneOf": [{ "enum": ["simulator", "live"] }, { "type": "null" }] } } }
+    "worker_provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "worker_contract", "worker_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "worker_contract": { "oneOf": [{ "const": "pixel.system-status-worker.v1" }, { "type": "null" }] }, "worker_source": { "oneOf": [{ "enum": ["simulator", "live"] }, { "type": "null" }] } } },
+    "executed_worker_provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "worker_contract", "worker_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "worker_contract": { "const": "pixel.system-status-worker.v1" }, "worker_source": { "enum": ["simulator", "live"] } } },
+    "denied_worker_provenance": { "type": "object", "additionalProperties": false, "required": ["relay_contract", "worker_contract", "worker_source"], "properties": { "relay_contract": { "const": "pixel.relay.v1" }, "worker_contract": { "type": "null" }, "worker_source": { "type": "null" } } },
+    "model_provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["relay_contract", "model_gateway_contract", "model_invocation_id", "model_runtime_id", "model_id", "model_source"],
+      "properties": {
+        "relay_contract": { "const": "pixel.relay.v1" },
+        "model_gateway_contract": { "const": "pixel.model-gateway.v1" },
+        "model_invocation_id": { "$ref": "#/$defs/identifier" },
+        "model_runtime_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+        "model_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+        "model_source": { "oneOf": [{ "const": "simulator" }, { "type": "null" }] }
+      },
+      "oneOf": [
+        { "properties": { "model_runtime_id": { "$ref": "#/$defs/identifier" }, "model_id": { "$ref": "#/$defs/identifier" }, "model_source": { "const": "simulator" } } },
+        { "properties": { "model_runtime_id": { "type": "null" }, "model_id": { "type": "null" }, "model_source": { "type": "null" } } }
+      ]
+    }
   }
 }

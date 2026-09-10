@@ -55,7 +55,11 @@ const EXECUTION_PROVENANCE_FIELDS = new Set(['tool_gateway_contract']);
 const DECISION_PROVENANCE_FIELDS = new Set([
   'tool_gateway_contract', 'grant_provider_contract', 'grant_source',
 ]);
-const RESULT_PROVENANCE_FIELDS = new Set(['relay_contract', 'worker_contract', 'worker_source']);
+const WORKER_RESULT_PROVENANCE_FIELDS = new Set(['relay_contract', 'worker_contract', 'worker_source']);
+const MODEL_RESULT_PROVENANCE_FIELDS = new Set([
+  'relay_contract', 'model_gateway_contract', 'model_invocation_id', 'model_runtime_id',
+  'model_id', 'model_source',
+]);
 
 const LEGAL_TRANSITIONS = new Map([
   ['SUBMITTED:ACCEPTED', new Set(['JOB_ACCEPTED'])],
@@ -319,9 +323,28 @@ export function validateJobResultV1(value) {
   if (!hasText(value.summary) || value.summary.length > 160) {
     errors.push('summary must be server-generated text between 1 and 160 characters');
   }
-  record(value.provenance, RESULT_PROVENANCE_FIELDS, 'provenance', errors, (provenance) => {
+  const modelBacked = isRecord(value.provenance) && Object.hasOwn(value.provenance, 'model_gateway_contract');
+  record(value.provenance, modelBacked ? MODEL_RESULT_PROVENANCE_FIELDS : WORKER_RESULT_PROVENANCE_FIELDS, 'provenance', errors, (provenance) => {
     if (provenance.relay_contract !== 'pixel.relay.v1') errors.push('provenance.relay_contract must equal pixel.relay.v1');
-    if (value.outcome_code === 'CAPABILITY_DENIED' || value.outcome_code === 'AUTHORIZATION_UNAVAILABLE') {
+    if (modelBacked) {
+      if (['CAPABILITY_DENIED', 'AUTHORIZATION_UNAVAILABLE'].includes(value.outcome_code)) {
+        errors.push('capability-denied results must not claim model provenance');
+      }
+      if (provenance.model_gateway_contract !== 'pixel.model-gateway.v1') {
+        errors.push('provenance.model_gateway_contract must equal pixel.model-gateway.v1');
+      }
+      identifier(provenance.model_invocation_id, 'provenance.model_invocation_id', errors);
+      const placement = [provenance.model_runtime_id, provenance.model_id, provenance.model_source];
+      const allNull = placement.every((item) => item === null);
+      const allPresent = placement.every((item) => item !== null);
+      if (!allNull && !allPresent) errors.push('model provenance placement must be fully present or fully null');
+      if (allPresent) {
+        identifier(provenance.model_runtime_id, 'provenance.model_runtime_id', errors);
+        identifier(provenance.model_id, 'provenance.model_id', errors);
+        if (provenance.model_source !== 'simulator') errors.push('provenance.model_source must equal simulator');
+      }
+      if (value.state === 'COMPLETED' && !allPresent) errors.push('completed model results require selected model provenance');
+    } else if (value.outcome_code === 'CAPABILITY_DENIED' || value.outcome_code === 'AUTHORIZATION_UNAVAILABLE') {
       if (provenance.worker_contract !== null || provenance.worker_source !== null) {
         errors.push('denied results must not claim worker provenance');
       }
