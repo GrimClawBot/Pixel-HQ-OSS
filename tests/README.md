@@ -6,6 +6,6 @@ Critical security behavior requires independent review beyond the builder that w
 
 ## Current suite
 
-Node's built-in test runner exercises strict contracts, adapters/providers, projections, HTTP servers, Policy decisions, client-forgery denial, revocation, outcome-specific evidence, replacement-provider parity, and Mission Control fail-closed rendering. Run the complete suite with `npm test`.
+Node's built-in test runner exercises strict contracts, adapters/providers, projections, HTTP servers, Policy decisions, client-forgery denial, revocation, Memory package binding, fixed model operations, deterministic model routing/budgets, unsafe provider data, no-fallback failure paths, outcome-specific evidence, replacement-provider parity, and Mission Control fail-closed rendering. Run the complete suite with `npm test`.
 
 Loopback HTTP integration tests may require local permission to bind ephemeral ports in a restricted development environment.

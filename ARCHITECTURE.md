@@ -19,6 +19,7 @@ flowchart TB
       AG[Access Gate]
       R[Relay]
       M[Memory]
+      MG[Model Gateway]
       TG[Tool Gateway]
       POL[Policy]
     end
@@ -32,6 +33,7 @@ flowchart TB
     subgraph Execution
       WK[Deterministic worker]
       SIM[Simulator adapters]
+      FM[Fake Model A / B]
     end
 
     subgraph Evidence
@@ -48,10 +50,12 @@ flowchart TB
     CL --> R
     REG --> R
     R --> M
+    R --> MG
     R --> TG
     POL --> M
     POL --> TG
     TG --> WK
+    MG --> FM
 
     SIM -. Pixel-owned seams .-> ID
     SIM -.-> DT
@@ -62,6 +66,7 @@ flowchart TB
     AG --> EV
     R --> EV
     M --> EV
+    MG --> EV
     TG --> EV
     WK --> EV
     EV --> TC
@@ -91,6 +96,12 @@ The service copies and revalidates adapter-returned records before filtering/sco
 
 Execution-time capabilities are resolved at the boundary where a tool action would occur. The worker cannot self-grant capability by including permission-shaped text in a request.
 
+### Model Gateway
+
+PX-005 exposes only the Pixel-owned `SYSTEM_STATUS_SUMMARY` operation. Relay resolves an approved immutable Memory package, enters RUNNING, creates and claims the canonical invocation, and later owns terminal commit. Model Gateway receives only read access to canonical job state. Operation eligibility is separate from placement: the exact read-only system-status tuple is required before deterministic `simulation → Fake Model A` or `dev → Fake Model B` routing. Gateway outcomes are bounded untrusted inputs that Relay revalidates against eligibility, route, placement, and budget state; they are never lifecycle authority.
+
+The fixed instruction and approved item text are measured in Pixel Alpha token units with the existing Memory tokenizer. This accounting is not a vendor-tokenizer, billing, or production-token claim.
+
 ### Adapters
 
 The public Alpha uses simulator implementations behind Pixel-owned seams. A future live implementation must satisfy the same boundary and is still revalidated by the receiving Pixel service.
@@ -111,6 +122,7 @@ Security and lifecycle events are emitted as bounded structured evidence. Comple
 8. **Mission Control reflects canonical backend state; it does not invent it.**
 9. **Evidence must be reconstructable without hidden model reasoning.**
 10. **Simulation, Shadow, Canary, and Production are distinct maturity boundaries.**
+11. **Runtime/model identity is distinct from Pixel agent identity and cannot create authority.**
 
 ## Completed slices
 
@@ -120,9 +132,10 @@ Security and lifecycle events are emitted as bounded structured evidence. Comple
 | PX-002 | Identity + DeviceTrust + Policy → Access Gate decision |
 | PX-003 | Relay lifecycle + Tool Gateway + deterministic worker + causal evidence |
 | PX-004 | Memory intake/context contracts + server-owned scope + deterministic filtering/budgets + Relay-linked evidence |
+| PX-005 | Relay-owned fixed model invocation + deterministic simulator routing + bounded Gateway result/evidence |
 
 See [`docs/architecture/alpha-milestones.md`](docs/architecture/alpha-milestones.md) for the public milestone summary.
 
 ## Not production claims
 
-The current source does **not** provide production PKI, secret storage, durable queues/databases, durable audit retention, production network exposure, real infrastructure adapters, disaster recovery, autonomous patching, a continuously running LLM workforce, or a production-grade Memory store. Those capabilities require separate design, review, and promotion.
+The current source does **not** provide production PKI, secret storage, durable queues/databases, durable audit retention, production network exposure, real infrastructure/model providers, vendor token accounting, fallback/retries, disaster recovery, autonomous patching, a continuously running LLM workforce, or a production-grade Memory store. Those capabilities require separate design, review, and promotion.

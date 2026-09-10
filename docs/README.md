@@ -6,7 +6,8 @@ Start with the root [`README.md`](../README.md) for the 60-second demo, current 
 
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — public-safe system map and core invariants.
 - [`THREAT_MODEL.md`](../THREAT_MODEL.md) — trust boundaries, threat/control matrix, and Alpha security assumptions.
-- [`architecture/alpha-milestones.md`](architecture/alpha-milestones.md) — detailed summary of the completed public-safe PX-001 through PX-004 slices.
+- [`architecture/alpha-milestones.md`](architecture/alpha-milestones.md) — detailed summary of the completed public-safe PX-001 through PX-005 slices.
+- [`architecture/px-005-model-gateway-design.md`](architecture/px-005-model-gateway-design.md) — frozen simulator-first PX-005 ownership, contracts, routing, and security design.
 
 ## Try it
 

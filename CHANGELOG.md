@@ -4,6 +4,16 @@ All notable **public-safe** changes to Pixel HQ are recorded here. Architecture 
 
 ## Unreleased
 
+### PX-005 — Pixel Model Gateway
+
+- added five strict Pixel-owned model invocation/routing/provider/outcome contracts and schemas;
+- bound Relay-created immutable invocations to approved Memory packages and fixed instructions using canonical SHA-256 bindings;
+- separated exact operation eligibility from deterministic simulator placement (`simulation → Fake Model A`, `dev → Fake Model B`);
+- enforced route input/output caps in Pixel Alpha token units with no provider fallback;
+- rejected accessor-backed, exotic-prototype, cyclic, malformed, or identity-substituted provider data;
+- preserved PX-003 worker execution while adding a mutually exclusive model claim/provenance path for truthful Relay terminal commits;
+- added model/job evidence completeness without recording Memory or model output text.
+
 ### Repository presentation and community readiness
 
 - redesigned the README around project identity, shipped capabilities, a 60-second demo, architecture map, security model, and contributor navigation;

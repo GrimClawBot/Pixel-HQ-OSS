@@ -13,7 +13,7 @@
 
 # Pixel HQ
 
-**Pixel HQ is a secure operating layer for AI-assisted organizations.** The public Alpha proves that identity, device trust, jobs, Memory, tool execution, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
+**Pixel HQ is a secure operating layer for AI-assisted organizations.** The public Alpha proves that identity, device trust, jobs, Memory, model/tool execution, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
 
 This repository is a **public-safe Alpha architecture proof**. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
 
@@ -22,6 +22,7 @@ This repository is a **public-safe Alpha architecture proof**. It does not claim
 - **Models are runtimes, not identities.** A model or coding harness can be replaced without redefining the organization.
 - **Clients are not authority.** Identity, trust, ownership, lifecycle, scope, grants, and tool permissions are resolved server-side.
 - **Memory is data, not authority.** Remembered text can provide context but cannot grant permissions, widen scope, or mutate job/tool authority.
+- **Model invocation is bounded.** Relay owns the fixed operation and immutable invocation; Model Gateway routes only to deterministic Alpha simulators and cannot own lifecycle state.
 - **Tools are capability-gated.** Execution authority is checked at the Tool Gateway rather than inferred from agent intent.
 - **Simulation comes first.** Hardware-facing behavior is proven against replaceable simulator/live-shaped seams before production adapters exist.
 - **Evidence is part of the design.** Material state changes and security decisions are structured so they can be reviewed and reconstructed.
@@ -67,8 +68,10 @@ flowchart LR
     C[Client / Mission Control] --> A[Access Gate]
     A --> R[Pixel Relay]
     R --> M[Memory]
+    R --> MG[Model Gateway]
     R --> T[Tool Gateway]
     T --> W[Deterministic Worker]
+    MG --> FM[Fake Model A / B]
 
     I[Identity] --> A
     D[DeviceTrust] --> A
@@ -79,6 +82,7 @@ flowchart LR
     A --> E[Structured Evidence]
     R --> E
     M --> E
+    MG --> E
     T --> E
     W --> E
 ```
@@ -93,12 +97,12 @@ The public Alpha includes explicit tests for fail-closed behavior, forged author
 
 ## Project map
 
-- `adapters/simulator/` — deterministic Alpha providers, stores, and workers
+- `adapters/simulator/` — deterministic Alpha providers, stores, workers, and fake models
 - `packages/contracts/` — versioned contracts and JSON Schemas
 - `packages/adapter-sdk/` — replaceable runtime boundaries
 - `packages/registry/` — synthetic public composition fixture
 - `packages/telemetry/` — structured evidence and completeness checks
-- `services/` — device projection, Policy, Access Gate, Relay, Memory, and Tool Gateway
+- `services/` — device projection, Policy, Access Gate, Relay, Memory, Model Gateway, and Tool Gateway
 - `apps/mission-control/` — lightweight presentation and local composition
 - `tests/` — contract, integration, security, UI, and evidence coverage
 - `docs/` — public architecture and demo documentation
