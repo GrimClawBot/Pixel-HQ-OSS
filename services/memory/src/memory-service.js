@@ -127,6 +127,7 @@ function requireDependencies({ environment, intakeContextProvider, memoryStore, 
 }
 
 export class MemoryService {
+  #approvedPackages = new Map();
   #clock;
   #environment;
   #evidence;
@@ -144,6 +145,12 @@ export class MemoryService {
     this.#evidence = evidence;
     this.#ids = ids;
     this.#clock = clock;
+  }
+
+  getApprovedContextPackage(packageId) {
+    if (typeof packageId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(packageId)) return null;
+    const contextPackage = this.#approvedPackages.get(packageId);
+    return contextPackage ? frozenCopy(contextPackage) : null;
   }
 
   #append({ traceId, spanId, parentSpanId = null, eventName, outcome = 'success', severity = 'info', attributes = {} }) {
@@ -627,6 +634,7 @@ export class MemoryService {
         'pixel.memory.omitted_count': omittedCount,
       },
     });
+    this.#approvedPackages.set(contextPackage.package_id, contextPackage);
     return frozenCopy({ disposition: 'CREATED', package: contextPackage, trace_id: traceId });
   }
 }
