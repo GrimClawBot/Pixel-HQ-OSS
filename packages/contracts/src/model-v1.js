@@ -11,6 +11,8 @@ export const MODEL_GATEWAY_CONTRACT = 'pixel.model-gateway.v1';
 export const MODEL_ROUTING_POLICY_ID = 'pixel.model-routing.alpha.v1';
 export const MODEL_OPERATION_POLICY_ID = 'pixel.model-operation.alpha.v1';
 export const MODEL_OUTPUT_MAX_CHARS = 512;
+export const MODEL_CONTEXT_MAX_ITEMS = 4;
+export const MODEL_CONTEXT_MAX_TEXT_CHARS = 2048;
 
 export const SYSTEM_STATUS_SUMMARY_TEMPLATE = Object.freeze({
   template_id: 'pixel.model.instruction.system-status-summary',
@@ -212,6 +214,8 @@ export function validateModelInvocationV1(value) {
     hash(context.package_hash, 'context.package_hash', errors);
     positiveInteger(context.item_count, 'context.item_count', errors, { allowZero: true });
     positiveInteger(context.text_chars, 'context.text_chars', errors, { allowZero: true });
+    if (context.item_count > MODEL_CONTEXT_MAX_ITEMS) errors.push(`context.item_count must not exceed ${MODEL_CONTEXT_MAX_ITEMS}`);
+    if (context.text_chars > MODEL_CONTEXT_MAX_TEXT_CHARS) errors.push(`context.text_chars must not exceed ${MODEL_CONTEXT_MAX_TEXT_CHARS}`);
     positiveInteger(context.input_token_units, 'context.input_token_units', errors);
   });
   record(value.provenance, RELAY_PROVENANCE_FIELDS, 'provenance', errors, (provenance) => {
@@ -305,12 +309,16 @@ export function validateModelGatewayOutcomeV1(value) {
   } else {
     if (!FAILURE_REASONS.has(value.reason_code)) errors.push('failure reason is unsupported');
     if (value.output !== null) errors.push('failed outcome must have null output');
-    if (value.placement !== null) validatePlacement(value.placement, errors);
     if (value.reason_code === 'OPERATION_INELIGIBLE') {
       if (value.route_decision_id !== null || value.placement !== null) {
         errors.push('ineligible operation must precede routing');
       }
-    } else identifier(value.route_decision_id, 'route_decision_id', errors);
+    } else {
+      identifier(value.route_decision_id, 'route_decision_id', errors);
+      if (value.reason_code === 'ROUTE_UNSUPPORTED') {
+        if (value.placement !== null) errors.push('unsupported route must have null placement');
+      } else validatePlacement(value.placement, errors);
+    }
   }
   record(value.context, OUTCOME_CONTEXT_FIELDS, 'context', errors, (context) => {
     identifier(context.package_id, 'context.package_id', errors);

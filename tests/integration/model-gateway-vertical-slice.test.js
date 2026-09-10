@@ -401,4 +401,24 @@ test('successful model execution produces one complete bounded causal evidence f
   const mixed = structuredClone(records);
   mixed.push({ ...mixed.at(-1), span_id: 'ffffffffffffffff', event_name: 'worker.execution.started' });
   assert.equal(assessModelTraceCompleteness(mixed).complete, false);
+
+  const missingSuccessProof = structuredClone(records)
+    .filter(({ event_name: eventName }) => ![
+      'model.provider.result_validated', 'model.output_budget.checked',
+    ].includes(eventName));
+  const providerStarted = missingSuccessProof.find(({ event_name: eventName }) => (
+    eventName === 'model.provider.invocation_started'
+  ));
+  missingSuccessProof.find(({ event_name: eventName }) => (
+    eventName === 'model.gateway.outcome_created'
+  )).parent_span_id = providerStarted.span_id;
+  assert.equal(assessModelTraceCompleteness(missingSuccessProof).complete, false);
+
+  const contradictoryDisposition = structuredClone(records);
+  const createdOutcome = contradictoryDisposition.find(({ event_name: eventName }) => (
+    eventName === 'model.gateway.outcome_created'
+  ));
+  createdOutcome.outcome = 'failure';
+  createdOutcome.severity = 'warning';
+  assert.equal(assessModelTraceCompleteness(contradictoryDisposition).complete, false);
 });

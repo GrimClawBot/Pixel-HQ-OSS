@@ -89,15 +89,44 @@ function expectedSequence(records) {
   const suffix = ['contract.job_result.validated', 'job.result.projected', names.has('relay.job.completed') ? 'relay.job.completed' : 'relay.job.failed'];
   if (names.has('model.gateway.outcome_rejected')) return [...PREFIX, 'model.gateway.outcome_rejected', ...suffix];
   const gateway = ['model.invocation.validated', 'model.operation.eligibility_decided'];
-  if (!names.has('model.route.decided')) return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
+  const reason = records.find(({ event_name: eventName }) => (
+    eventName === 'model.gateway.outcome_created'
+  ))?.attributes?.['pixel.model.reason_code'];
+  if (reason === 'OPERATION_INELIGIBLE') return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
   gateway.push('model.route.decided');
-  if (!names.has('model.input_budget.checked')) return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
+  if (reason === 'ROUTE_UNSUPPORTED') return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
   gateway.push('model.input_budget.checked');
-  if (!names.has('model.provider.invocation_started')) return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
+  if (['EMPTY_CONTEXT', 'INPUT_BUDGET_EXCEEDED', 'ADAPTER_UNAVAILABLE'].includes(reason)) {
+    return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
+  }
   gateway.push('model.provider.invocation_started');
-  if (names.has('model.provider.result_validated')) gateway.push('model.provider.result_validated');
-  if (names.has('model.output_budget.checked')) gateway.push('model.output_budget.checked');
+  if (reason !== 'PROVIDER_RESULT_INVALID' || names.has('model.provider.result_validated')) {
+    gateway.push('model.provider.result_validated', 'model.output_budget.checked');
+  }
   return [...PREFIX, ...gateway, 'model.gateway.outcome_created', 'model.gateway.outcome_accepted', ...suffix];
+}
+
+function expectedSignal(record) {
+  const value = (key) => record.attributes?.[key];
+  switch (record.event_name) {
+    case 'model.operation.eligibility_decided':
+      return value('pixel.model.operation_decision') === 'ALLOW' ? ['success', 'info'] : ['denied', 'warning'];
+    case 'model.route.decided':
+      return value('pixel.model.route_decision') === 'ROUTE' ? ['success', 'info'] : ['denied', 'warning'];
+    case 'model.input_budget.checked':
+      return value('pixel.model.reason_code') === 'INPUT_BUDGET_ALLOWED' ? ['success', 'info'] : ['denied', 'warning'];
+    case 'model.gateway.outcome_created':
+    case 'model.gateway.outcome_accepted':
+      return value('pixel.model.status') === 'SUCCEEDED' ? ['success', 'info'] : ['failure', 'warning'];
+    case 'model.gateway.outcome_rejected':
+    case 'relay.job.failed':
+      return ['failure', 'warning'];
+    case 'job.result.projected':
+      return value('pixel.job.outcome_code') === 'SYSTEM_STATUS_AVAILABLE'
+        ? ['success', 'info'] : ['failure', 'warning'];
+    default:
+      return ['success', 'info'];
+  }
 }
 
 function boundedAttributes(value) {
@@ -177,6 +206,10 @@ export function assessModelTraceCompleteness(records) {
     if (typeof record.span_id !== 'string' || !SPAN_ID.test(record.span_id) || spans.has(record.span_id)) errors.push('span identifiers must be valid and unique');
     spans.add(record.span_id);
     if (record.service_name !== rule[0]) errors.push(`${record.event_name} has the wrong service owner`);
+    const [expectedOutcome, expectedSeverity] = expectedSignal(record);
+    if (record.outcome !== expectedOutcome || record.severity !== expectedSeverity) {
+      errors.push(`${record.event_name} has contradictory outcome or severity`);
+    }
     const keys = Object.keys(record.attributes ?? {}).sort();
     if (JSON.stringify(keys) !== JSON.stringify([...rule[1]].sort()) || !boundedAttributes(record.attributes)) {
       errors.push(`${record.event_name} has unbounded or unsupported attributes`);

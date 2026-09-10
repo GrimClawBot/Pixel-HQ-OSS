@@ -20,7 +20,8 @@
   "oneOf": [
     { "properties": { "status": { "const": "SUCCEEDED" }, "reason_code": { "const": "MODEL_OUTPUT_AVAILABLE" }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "$ref": "#/$defs/placement" }, "output": { "$ref": "#/$defs/output" } } },
     { "properties": { "status": { "const": "FAILED" }, "reason_code": { "const": "OPERATION_INELIGIBLE" }, "route_decision_id": { "type": "null" }, "placement": { "type": "null" }, "output": { "type": "null" } } },
-    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "enum": ["ROUTE_UNSUPPORTED", "EMPTY_CONTEXT", "INPUT_BUDGET_EXCEEDED", "ADAPTER_UNAVAILABLE", "PROVIDER_RESULT_INVALID", "OUTPUT_BUDGET_EXCEEDED"] }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "output": { "type": "null" } } }
+    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "const": "ROUTE_UNSUPPORTED" }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "type": "null" }, "output": { "type": "null" } } },
+    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "enum": ["EMPTY_CONTEXT", "INPUT_BUDGET_EXCEEDED", "ADAPTER_UNAVAILABLE", "PROVIDER_RESULT_INVALID", "OUTPUT_BUDGET_EXCEEDED"] }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "$ref": "#/$defs/placement" }, "output": { "type": "null" } } }
   ],
   "$defs": {
     "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }, "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },

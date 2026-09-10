@@ -79,7 +79,7 @@ Anything entering from a client/model or an adapter/store boundary is treated as
 | **Unbounded result/context** | Worker or Memory package becomes arbitrarily large | Bounded result summaries and whole-record Memory package budgets |
 | **Model-created authority** | Model text claims identity, grants, tools, routing, or lifecycle changes | Fixed Pixel operation/template, strict contracts, separate eligibility, Relay-owned lifecycle/result |
 | **Route substitution** | Caller/model requests another runtime or fallback | Routing uses only the canonical job environment; unsupported/failed routes stop |
-| **Unsafe provider data** | Adapter returns getters, exotic prototypes, cycles, identity substitution, or false usage | Descriptor-first rejection, isolated snapshot/revalidation, identity binding, recomputed output units |
+| **Unsafe provider data** | Adapter returns getters, exotic prototypes, cycles, excessive nesting/size, identity substitution, or false usage | Bounded descriptor-first rejection, isolated snapshot/revalidation, identity binding, recomputed output units |
 
 ## Memory-specific invariants
 

@@ -77,7 +77,7 @@ Runtime validation enforces exact fields and cross-field invariants. JSON Schema
 
 ## Adapter boundary
 
-The adapter SDK accepts simulator source only for PX-005 Alpha and requires exact immutable identity plus `invoke(providerRequest)`. Before any copy, Gateway walks property descriptors without reading properties and rejects accessors, symbol keys, exotic prototypes, cycles, functions, `undefined`, bigint, and non-finite numbers. It then snapshots, validates, and freezes the isolated result. A thrown, malformed, identity-substituted, over-budget, or mutation-oriented result fails closed.
+The adapter SDK accepts simulator source only for PX-005 Alpha and requires exact immutable identity plus `invoke(providerRequest)`. Before any copy, Gateway performs a depth-, node-, property-, and string-bounded descriptor walk without reading properties; it rejects accessors, symbol keys, exotic prototypes, cycles, functions, `undefined`, bigint, and non-finite numbers. It then snapshots, validates, and freezes the isolated result. A thrown, malformed, identity-substituted, over-budget, or mutation-oriented result fails closed.
 
 Fake Model A and Fake Model B are independent deterministic adapters. Each returns only `Fake Model A summarized N approved context item(s).` or the Model B equivalent, where `N` is the validated context array length. Context text cannot change route, output shape, identity, or authority.
 
@@ -94,7 +94,7 @@ Successful model execution produces the existing `COMPLETED / SYSTEM_STATUS_AVAI
 
 ## Evidence
 
-Gateway evidence records IDs, operation, route, runtime/model identities, reason codes, counts, caps, hashes, and contract/source identifiers only. It never records instruction text, Memory text, model output, raw adapter errors, or credentials. Relay evidence records invocation creation/claim, Gateway outcome acceptance/rejection, job-result validation/projection, and the terminal transition. Completeness checks distinguish model and worker branches and reject mixed, missing, duplicated, reordered, or contradictory stages.
+Gateway evidence records IDs, operation, route, runtime/model identities, reason codes, counts, caps, hashes, and contract/source identifiers only. It never records instruction text, Memory text, model output, raw adapter errors, or credentials. Relay evidence records invocation creation/claim, Gateway outcome acceptance/rejection, job-result validation/projection, and the terminal transition. Outcome-specific completeness checks validate stage presence, ownership, parentage, outcome/severity semantics, and reject mixed, missing, duplicated, reordered, or contradictory stages.
 
 ## Explicitly deferred
 

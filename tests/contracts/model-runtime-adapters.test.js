@@ -53,6 +53,14 @@ test('safe snapshot rejects accessors, exotic prototypes, cycles, symbols, and u
   assert.throws(() => assertSafePlainData(symbol), /plain data/);
   assert.throws(() => assertSafePlainData({ value: undefined }), /plain data/);
   assert.throws(() => assertSafePlainData({ value: Number.POSITIVE_INFINITY }), /plain data/);
+
+  let deep = { value: 'leaf' };
+  for (let index = 0; index < 17; index += 1) deep = { child: deep };
+  assert.throws(() => assertSafePlainData(deep), /plain data/);
+  assert.throws(() => assertSafePlainData(Object.fromEntries(
+    Array.from({ length: 65 }, (_, index) => [`field_${index}`, index]),
+  )), /plain data/);
+  assert.throws(() => assertSafePlainData({ value: 'x'.repeat(4097) }), /plain data/);
 });
 
 test('provider result snapshot validates the exact isolated bytes', () => {

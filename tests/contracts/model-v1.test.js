@@ -182,6 +182,14 @@ test('route and outcome cross-field invariants fail closed', () => {
   assert.equal(validateModelRouteDecisionV1({ ...route, decision: 'DENY' }).ok, false);
   assert.equal(validateModelGatewayOutcomeV1({ ...outcome, status: 'FAILED' }).ok, false);
   assert.equal(validateModelGatewayOutcomeV1({ ...outcome, output: null }).ok, false);
+  assert.equal(validateModelInvocationV1({
+    ...invocation,
+    context: { ...invocation.context, item_count: 5 },
+  }).ok, false);
+  assert.equal(validateModelInvocationV1({
+    ...invocation,
+    context: { ...invocation.context, text_chars: 2049 },
+  }).ok, false);
 
   const failed = {
     ...outcome,
@@ -200,6 +208,15 @@ test('route and outcome cross-field invariants fail closed', () => {
     ...failed,
     reason_code: 'ROUTE_UNSUPPORTED',
     route_decision_id: null,
+  }).ok, false);
+  assert.equal(validateModelGatewayOutcomeV1({
+    ...failed,
+    reason_code: 'ROUTE_UNSUPPORTED',
+  }).ok, false);
+  assert.equal(validateModelGatewayOutcomeV1({
+    ...failed,
+    reason_code: 'EMPTY_CONTEXT',
+    placement: null,
   }).ok, false);
 });
 
