@@ -458,16 +458,27 @@ export class RelayService {
         && outcome.reason_code === 'ROUTE_UNSUPPORTED'
         && outcome.placement === null;
     }
-    if (outcome.placement !== null && JSON.stringify(outcome.placement) !== JSON.stringify(route.placement)) return false;
+    const inputAllowed = invocation.context.item_count > 0
+      && invocation.context.input_token_units <= route.budget.max_input_token_units;
+    if (JSON.stringify(outcome.placement) !== JSON.stringify(route.placement)) return false;
     if (outcome.status === 'SUCCEEDED') {
       const outputUnits = tokenizeMemoryText(outcome.output.text).length;
-      return outcome.reason_code === 'MODEL_OUTPUT_AVAILABLE'
+      return inputAllowed
+        && outcome.reason_code === 'MODEL_OUTPUT_AVAILABLE'
         && outcome.output.hash === createHash('sha256').update(outcome.output.text, 'utf8').digest('hex')
         && outcome.output.token_units === outputUnits
         && outputUnits <= route.budget.max_output_token_units
         && Array.from(outcome.output.text).length <= route.budget.max_output_chars;
     }
-    return outcome.output === null;
+    if (outcome.output !== null) return false;
+    if (outcome.reason_code === 'EMPTY_CONTEXT') return invocation.context.item_count === 0;
+    if (outcome.reason_code === 'INPUT_BUDGET_EXCEEDED') {
+      return invocation.context.item_count > 0
+        && invocation.context.input_token_units > route.budget.max_input_token_units;
+    }
+    return inputAllowed && [
+      'ADAPTER_UNAVAILABLE', 'PROVIDER_RESULT_INVALID', 'OUTPUT_BUDGET_EXCEEDED',
+    ].includes(outcome.reason_code);
   }
 
   async #commitModelTerminal(invocation, outcome, parentSpanId, invalidOutcome = false) {

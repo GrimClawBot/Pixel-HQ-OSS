@@ -166,6 +166,7 @@ test('contracts reject caller prompts, authority, lifecycle, and extra nested fi
     context_items: [{ ...providerRequest.context_items[0], memory_id: 'memory-001' }],
   }).errors.join(' '), /unsupported field memory_id/);
   assert.match(validateModelGatewayOutcomeV1({ ...outcome, lifecycle: 'COMPLETED' }).errors.join(' '), /unsupported field lifecycle/);
+  assert.equal(validateModelProviderResultV1({ ...providerResult, source: 'live' }).ok, false);
 });
 
 test('route and outcome cross-field invariants fail closed', () => {

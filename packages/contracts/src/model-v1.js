@@ -276,7 +276,7 @@ export function validateModelProviderResultV1(value) {
   if (value.provider_contract !== MODEL_RUNTIME_ADAPTER_CONTRACT) errors.push('provider_contract is invalid');
   identifier(value.runtime_id, 'runtime_id', errors);
   identifier(value.model_id, 'model_id', errors);
-  if (!SOURCES.has(value.source)) errors.push('source must be simulator or live');
+  if (value.source !== 'simulator') errors.push('source must equal simulator in PX-005 Alpha');
   if (value.status !== 'OUTPUT_AVAILABLE') errors.push('status must equal OUTPUT_AVAILABLE');
   text(value.output_text, 'output_text', errors, MODEL_OUTPUT_MAX_CHARS);
   positiveInteger(value.output_token_units, 'output_token_units', errors);

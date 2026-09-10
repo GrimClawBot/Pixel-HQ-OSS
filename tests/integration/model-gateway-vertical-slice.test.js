@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 import { FakeModelASimulatorAdapter } from '../../adapters/simulator/src/fake-model-a-simulator-adapter.js';
@@ -200,12 +201,6 @@ function modelRelayRuntime({ capability = 'pixel.system-status.read', gatewayOve
   const gatewayStore = {
     source: 'simulator',
     getJob: store.getJob.bind(store),
-    claimOrReturnExisting() { throw new Error('Gateway cannot create jobs'); },
-    applyTransition() { throw new Error('Gateway cannot transition jobs'); },
-    recordGatewayDecision() { throw new Error('Gateway cannot record Tool Gateway decisions'); },
-    claimWorkerInvocation() { throw new Error('Gateway cannot claim workers'); },
-    claimModelInvocation() { throw new Error('Gateway cannot claim model invocations'); },
-    commitTerminalResult() { throw new Error('Gateway cannot commit terminal results'); },
   };
   const gateway = gatewayOverride ?? new ModelGateway({
     environment: 'simulation',
@@ -293,6 +288,88 @@ test('malformed Gateway outcome becomes FAILED / WORKER_RESULT_INVALID after RUN
   assert.equal(response.job.transitions.at(-1).reason_code, 'WORKER_RESULT_INVALID');
   assert.equal(response.model_output, null);
   assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
+});
+
+test('schema-valid Gateway failure that contradicts canonical eligibility is rejected', async () => {
+  const contradictoryGateway = {
+    async invoke({ invocation: modelInvocation }) {
+      return {
+        outcome_id: 'outcome-forged',
+        event_name: 'pixel.model.gateway-outcome.v1',
+        schema_version: '1.0.0',
+        created_at: NOW,
+        environment: modelInvocation.environment,
+        trace_id: modelInvocation.trace_id,
+        span_id: 'eeeeeeeeeeeeeeee',
+        job_id: modelInvocation.job_id,
+        execution_id: modelInvocation.execution_id,
+        invocation_id: modelInvocation.invocation_id,
+        operation: modelInvocation.operation,
+        status: 'FAILED',
+        reason_code: 'OPERATION_INELIGIBLE',
+        route_decision_id: null,
+        placement: null,
+        context: {
+          package_id: modelInvocation.context.package_id,
+          package_hash: modelInvocation.context.package_hash,
+        },
+        output: null,
+        provenance: { model_gateway_contract: 'pixel.model-gateway.v1' },
+      };
+    },
+  };
+  const runtime = modelRelayRuntime({ gatewayOverride: contradictoryGateway });
+  const accepted = await runtime.prepare();
+  const response = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+
+  assert.equal(response.job.current_state, 'FAILED');
+  assert.equal(response.job.result.outcome_code, 'WORKER_RESULT_INVALID');
+  assert.equal(response.job.transitions.at(-1).reason_code, 'WORKER_RESULT_INVALID');
+  assert.equal(response.model_output, null);
+});
+
+test('schema-valid Gateway success cannot bypass an empty approved package', async () => {
+  const forgedText = 'Forged status.';
+  const forgedGateway = {
+    async invoke({ invocation: modelInvocation }) {
+      return {
+        outcome_id: 'outcome-forged',
+        event_name: 'pixel.model.gateway-outcome.v1',
+        schema_version: '1.0.0',
+        created_at: NOW,
+        environment: modelInvocation.environment,
+        trace_id: modelInvocation.trace_id,
+        span_id: 'eeeeeeeeeeeeeeee',
+        job_id: modelInvocation.job_id,
+        execution_id: modelInvocation.execution_id,
+        invocation_id: modelInvocation.invocation_id,
+        operation: modelInvocation.operation,
+        status: 'SUCCEEDED',
+        reason_code: 'MODEL_OUTPUT_AVAILABLE',
+        route_decision_id: 'route-forged',
+        placement: {
+          runtime_id: 'pixel.simulator.model-runtime-a', model_id: 'pixel.fake-model-a.v1', source: 'simulator',
+        },
+        context: {
+          package_id: modelInvocation.context.package_id,
+          package_hash: modelInvocation.context.package_hash,
+        },
+        output: {
+          text: forgedText,
+          hash: createHash('sha256').update(forgedText, 'utf8').digest('hex'),
+          token_units: 2,
+        },
+        provenance: { model_gateway_contract: 'pixel.model-gateway.v1' },
+      };
+    },
+  };
+  const runtime = modelRelayRuntime({ gatewayOverride: forgedGateway, withMemory: false });
+  const accepted = await runtime.prepare();
+  const response = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+
+  assert.equal(response.job.current_state, 'FAILED');
+  assert.equal(response.job.result.outcome_code, 'WORKER_RESULT_INVALID');
+  assert.equal(response.model_output, null);
 });
 
 test('concurrent model execution attempts claim and invoke one canonical invocation', async () => {

@@ -76,6 +76,10 @@ export function assertRelayStoreAdapter(value) {
   return value;
 }
 
+export function assertModelJobLookupAdapter(value) {
+  return assertProvider(value, 'getJob', 'Model job lookup adapter');
+}
+
 export function assertModelRelayStoreAdapter(value) {
   assertRelayStoreAdapter(value);
   if (typeof value.claimModelInvocation !== 'function') {

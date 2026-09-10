@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import {
-  assertModelRelayStoreAdapter,
+  assertModelJobLookupAdapter,
 } from '../../../packages/adapter-sdk/src/job-runtime-adapters.js';
 import {
   assertModelRuntimeAdapter,
@@ -62,7 +62,7 @@ function validJobProjection(job) {
 
 function requireDependencies({ environment, store, memory, adapters, evidence, ids, clock }) {
   if (!ENVIRONMENTS.has(environment)) throw new TypeError('Model Gateway requires a canonical environment');
-  assertModelRelayStoreAdapter(store);
+  assertModelJobLookupAdapter(store);
   if (!memory || typeof memory.getApprovedContextPackage !== 'function') {
     throw new TypeError('Model Gateway requires approved Memory package lookup');
   }
