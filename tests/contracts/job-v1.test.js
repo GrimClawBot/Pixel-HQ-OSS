@@ -222,6 +222,53 @@ test('result summary is server-bounded and terminal outcome combinations are con
   }).ok, true);
 });
 
+test('model-backed terminal provenance is strict, truthful, and preserves legacy worker results', () => {
+  const modelResult = {
+    ...fixtures.result,
+    provenance: {
+      relay_contract: 'pixel.relay.v1',
+      model_gateway_contract: 'pixel.model-gateway.v1',
+      model_invocation_id: 'invocation-001',
+      model_runtime_id: 'pixel.simulator.model-runtime-a',
+      model_id: 'pixel.fake-model-a.v1',
+      model_source: 'simulator',
+    },
+  };
+
+  assert.deepEqual(validateJobResultV1(modelResult), { ok: true, errors: [] });
+  assert.deepEqual(validateJobResultV1(fixtures.result), { ok: true, errors: [] });
+  assert.equal(validateJobResultV1({
+    ...modelResult,
+    provenance: { ...modelResult.provenance, worker_contract: 'pixel.system-status-worker.v1' },
+  }).ok, false);
+  assert.equal(validateJobResultV1({
+    ...modelResult,
+    provenance: { ...modelResult.provenance, model_id: null },
+  }).ok, false);
+});
+
+test('failed model provenance permits only a fully null unavailable placement', () => {
+  const failed = {
+    ...fixtures.result,
+    state: 'FAILED',
+    outcome_code: 'WORKER_RESULT_INVALID',
+    summary: 'Pixel rejected an invalid model result.',
+    provenance: {
+      relay_contract: 'pixel.relay.v1',
+      model_gateway_contract: 'pixel.model-gateway.v1',
+      model_invocation_id: 'invocation-001',
+      model_runtime_id: null,
+      model_id: null,
+      model_source: null,
+    },
+  };
+  assert.deepEqual(validateJobResultV1(failed), { ok: true, errors: [] });
+  assert.equal(validateJobResultV1({
+    ...failed,
+    provenance: { ...failed.provenance, model_runtime_id: 'pixel.simulator.model-runtime-a' },
+  }).ok, false);
+});
+
 test('published schemas are strict at every declared object boundary', async () => {
   const names = [
     'pixel-job-submit-intent-v1.schema.json',

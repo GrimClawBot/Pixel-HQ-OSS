@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-model-invocation-v1.schema.json",
+  "title": "Pixel Model Invocation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["invocation_id", "event_name", "schema_version", "created_at", "environment", "trace_id", "span_id", "job_id", "execution_id", "operation", "execution", "pixel_agent_binding", "instruction", "context", "provenance"],
+  "properties": {
+    "invocation_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.model.invocation.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "$ref": "#/$defs/identifier" },
+    "operation": { "const": "SYSTEM_STATUS_SUMMARY" },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["job_type", "capability", "tool_class", "target"],
+      "properties": {
+        "job_type": { "const": "system-status" },
+        "capability": { "enum": ["pixel.system-status.read", "pixel.system-status.raw.read"] },
+        "tool_class": { "const": "pixel.system-status" },
+        "target": { "const": "pixel.platform" }
+      }
+    },
+    "pixel_agent_binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["agent_id", "department_ref", "role_ref"],
+      "properties": {
+        "agent_id": { "$ref": "#/$defs/identifier" },
+        "department_ref": { "$ref": "#/$defs/text" },
+        "role_ref": { "$ref": "#/$defs/text" }
+      }
+    },
+    "instruction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["template_id", "version", "hash"],
+      "properties": {
+        "template_id": { "const": "pixel.model.instruction.system-status-summary" },
+        "version": { "const": "1.0.0" },
+        "hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "context": {
+      "type": "object", "additionalProperties": false,
+      "required": ["package_id", "package_hash", "item_count", "text_chars", "input_token_units"],
+      "properties": {
+        "package_id": { "$ref": "#/$defs/identifier" },
+        "package_hash": { "$ref": "#/$defs/hash" },
+        "item_count": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "text_chars": { "type": "integer", "minimum": 0, "maximum": 2048 },
+        "input_token_units": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false, "required": ["relay_contract"],
+      "properties": { "relay_contract": { "const": "pixel.relay.v1" } }
+    }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "text": { "type": "string", "minLength": 1, "maxLength": 160 }
+  }
+}

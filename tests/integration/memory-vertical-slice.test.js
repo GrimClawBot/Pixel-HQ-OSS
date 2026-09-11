@@ -138,6 +138,53 @@ test('synthetic intake and accepted Relay job produce a canonical bounded contex
     'memory.context.budget_applied',
     'memory.context.package_created',
   ]);
+
+  const approved = subject.memory.getApprovedContextPackage(result.package.package_id);
+  assert.deepEqual(approved, result.package);
+  assert.notEqual(approved, result.package);
+  assert.equal(Object.isFrozen(approved), true);
+  assert.equal(Object.isFrozen(approved.items), true);
+  assert.equal(subject.memory.getApprovedContextPackage('package-missing'), null);
+  assert.equal(subject.memory.getApprovedContextPackage({ package_id: result.package.package_id }), null);
+});
+
+test('Memory registers no approved package when package-created evidence cannot commit', async () => {
+  const ids = createIds(90_000);
+  const committed = new EvidenceRecorder({ clock: () => NOW });
+  const evidence = {
+    append(record) {
+      if (record.eventName === 'memory.context.package_created') throw new Error('private evidence failure');
+      return committed.append(record);
+    },
+  };
+  const relayStore = new SimulatorRelayStoreAdapter();
+  const relay = new RelayService({
+    environment: 'simulation',
+    contextProvider: new SimulatorJobContextProvider(),
+    store: relayStore,
+    toolGateway: { source: 'simulator', async execute() { throw new Error('not used'); } },
+    evidence,
+    ids,
+    clock: () => NOW,
+  });
+  const memory = new MemoryService({
+    environment: 'simulation',
+    intakeContextProvider: new SimulatorMemoryIntakeContextProvider(),
+    memoryStore: new SimulatorMemoryStoreAdapter(),
+    relayStore,
+    evidence,
+    ids,
+    clock: () => NOW,
+  });
+  const accepted = await relay.accept({ ...JOB_INTENT, idempotency_key: 'memory-evidence-failure' });
+  await memory.intake({
+    event_name: 'pixel.memory.intake-intent.v1',
+    schema_version: '1.0.0',
+    content: { text: 'System status stable.', tags: ['system', 'status'] },
+  });
+
+  await assert.rejects(memory.buildContext({ job_id: accepted.job.envelope.job_id, query: 'system status' }));
+  assert.equal(memory.getApprovedContextPackage('package-90020'), null);
 });
 
 test('deterministic score, timestamp, and ID ordering excludes superseded and zero-relevance records', async () => {

@@ -28,10 +28,18 @@ The Memory service treats store output as untrusted: it copies and validates com
 
 Memory never mutates Relay, alters Policy, or mints Tool Gateway capability. Context evidence continues the canonical Relay trace and remains bounded to allowlisted fields/counts.
 
+## PX-005 — Pixel Model Gateway slice
+
+`ACCEPTED Relay job -> approved Memory package -> RUNNING -> Relay-owned invocation -> exact operation eligibility -> deterministic Fake Model A/B route -> bounded Gateway outcome -> Relay terminal result/evidence`
+
+The only operation is `SYSTEM_STATUS_SUMMARY`; callers provide no prompt or model preference. Eligibility requires the exact read-only system-status tuple and is separate from placement. Routing uses only the canonical job environment: simulation selects Fake Model A, dev selects Fake Model B, and every other route stops without fallback.
+
+Relay creates and atomically claims the immutable invocation after Memory package construction and the RUNNING transition. Canonical SHA-256 bindings cover the complete Memory package and fixed instruction template. Gateway independently resolves and validates those bindings, applies Pixel Alpha token-unit caps, sends only fixed instruction plus approved item text to one adapter, and rejects unsafe/malformed results. Relay alone validates the bounded outcome and commits the terminal Pixel result; runtime/model identity never replaces the Pixel agent binding.
+
 ## Replacement boundaries
 
-All public code consumes Pixel-owned interfaces. The included Registry is a minimal synthetic fixture with the same `getSystemsJobBinding()` interface used by the private composition boundary. It is not a copy or subset of a private roster. Future reviewed Registry, durable Relay/Memory stores, providers, workers, model gateways, or live device adapters can replace simulation counterparts only while preserving service-side validation and authority rules.
+All public code consumes Pixel-owned interfaces. The included Registry is a minimal synthetic fixture with the same `getSystemsJobBinding()` interface used by the private composition boundary. It is not a copy or subset of a private roster. Future reviewed Registry, durable Relay/Memory stores, providers, workers, model runtimes, or live device adapters can replace simulation counterparts only while preserving service-side validation and authority rules.
 
 ## Explicit limits
 
-The Alpha source does not provide production PKI, secrets management, real infrastructure adapters, durable execution/storage, retry/recovery, a broker, a scheduler, autonomous agents, a production-grade Memory database, or model-driven authorization. Recognizing an environment name never authorizes deployment there.
+The Alpha source does not provide production PKI, secrets management, real infrastructure/model providers, durable execution/storage, retry/recovery/fallback, streaming, a broker, a scheduler, autonomous agents, a production-grade Memory database, vendor token accounting, or model-driven authorization. Recognizing an environment name never authorizes deployment there.

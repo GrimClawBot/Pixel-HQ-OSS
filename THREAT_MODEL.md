@@ -19,6 +19,7 @@ Pixel HQ should remain safe even when a client, model, adapter, remembered/gener
 - Memory scope/handling and bounded context packages;
 - department/data-boundary decisions;
 - bounded worker results;
+- canonical model invocations and bounded model results;
 - structured evidence and causal trace relationships.
 
 The public source contains synthetic fixtures, not production credentials, certificates, personal records, or private infrastructure secrets.
@@ -39,8 +40,10 @@ flowchart LR
 
     AG --> R
     R --> M
+    R --> MG[Model Gateway]
     R --> TG
     TG --> W[Worker]
+    MG --> FM[Fake Model A / B]
 
     SA[Simulator / future adapter boundary] --> ID
     SA --> DT
@@ -52,6 +55,7 @@ flowchart LR
     M --> E
     TG --> E
     W --> E
+    MG --> E
 ```
 
 Anything entering from a client/model or an adapter/store boundary is treated as untrusted until copied/validated and rebound to server-owned context where required.
@@ -73,6 +77,9 @@ Anything entering from a client/model or an adapter/store boundary is treated as
 | **Evidence leakage** | Blocked Memory text/IDs or provider internals appear in logs | Bounded evidence allowlists and aggregate reason counts |
 | **Evidence ambiguity** | Repeated reads or malformed traces obscure causal history | Stable canonical evidence plus trace completeness checks |
 | **Unbounded result/context** | Worker or Memory package becomes arbitrarily large | Bounded result summaries and whole-record Memory package budgets |
+| **Model-created authority** | Model text claims identity, grants, tools, routing, or lifecycle changes | Fixed Pixel operation/template, strict contracts, separate eligibility, Relay-owned lifecycle/result |
+| **Route substitution** | Caller/model requests another runtime or fallback | Routing uses only the canonical job environment; unsupported/failed routes stop |
+| **Unsafe provider data** | Adapter returns getters, exotic prototypes, cycles, excessive nesting/size, identity substitution, or false usage | Bounded descriptor-first rejection, isolated snapshot/revalidation, identity binding, recomputed output units |
 
 ## Memory-specific invariants
 
@@ -90,7 +97,7 @@ Security-sensitive uncertainty should not widen access. Missing, invalid, stale,
 
 ## Model and AI assumptions
 
-A future attached model may hallucinate identity/permissions, follow malicious instructions, emit malformed output, attempt unauthorized tools, or repeat sensitive context. Therefore authorization, scope, device trust, Memory filtering, tool capability, and evidence rules must remain deterministic outside model behavior.
+The Alpha fake models are deterministic replaceable runtimes. They receive one fixed Pixel instruction plus approved item text only. A model may hallucinate identity/permissions, follow malicious instructions, emit malformed output, attempt unauthorized tools, or repeat sensitive context; therefore authorization, scope, device trust, Memory filtering, operation eligibility, routing, tool capability, lifecycle, and evidence remain deterministic outside model behavior.
 
 ## Adapter assumptions
 

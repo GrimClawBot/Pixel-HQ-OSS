@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-model-route-decision-v1.schema.json",
+  "title": "Pixel Model Route Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["route_decision_id", "event_name", "schema_version", "decided_at", "environment", "trace_id", "span_id", "invocation_id", "job_id", "execution_id", "decision", "reason_code", "policy_id", "placement", "budget", "provenance"],
+  "properties": {
+    "route_decision_id": { "$ref": "#/$defs/identifier" },
+    "event_name": { "const": "pixel.model.route-decision.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "decided_at": { "$ref": "#/$defs/timestamp" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "trace_id": { "$ref": "#/$defs/trace_id" },
+    "span_id": { "$ref": "#/$defs/span_id" },
+    "invocation_id": { "$ref": "#/$defs/identifier" },
+    "job_id": { "$ref": "#/$defs/identifier" },
+    "execution_id": { "$ref": "#/$defs/identifier" },
+    "decision": { "enum": ["ROUTE", "DENY"] },
+    "reason_code": { "enum": ["ROUTE_SELECTED", "ROUTE_UNSUPPORTED"] },
+    "policy_id": { "const": "pixel.model-routing.alpha.v1" },
+    "placement": { "oneOf": [{ "$ref": "#/$defs/placement" }, { "type": "null" }] },
+    "budget": { "oneOf": [{ "$ref": "#/$defs/budget" }, { "type": "null" }] },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "oneOf": [
+    { "properties": { "decision": { "const": "ROUTE" }, "reason_code": { "const": "ROUTE_SELECTED" }, "placement": { "$ref": "#/$defs/placement" }, "budget": { "$ref": "#/$defs/budget" } } },
+    { "properties": { "decision": { "const": "DENY" }, "reason_code": { "const": "ROUTE_UNSUPPORTED" }, "placement": { "type": "null" }, "budget": { "type": "null" } } }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "placement": { "type": "object", "additionalProperties": false, "required": ["runtime_id", "model_id", "source"], "properties": { "runtime_id": { "$ref": "#/$defs/identifier" }, "model_id": { "$ref": "#/$defs/identifier" }, "source": { "enum": ["simulator", "live"] } } },
+    "budget": { "type": "object", "additionalProperties": false, "required": ["max_input_token_units", "max_output_token_units", "max_output_chars"], "properties": { "max_input_token_units": { "type": "integer", "minimum": 1 }, "max_output_token_units": { "type": "integer", "minimum": 1 }, "max_output_chars": { "const": 512 } } },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["model_gateway_contract"], "properties": { "model_gateway_contract": { "const": "pixel.model-gateway.v1" } } }
+  }
+}

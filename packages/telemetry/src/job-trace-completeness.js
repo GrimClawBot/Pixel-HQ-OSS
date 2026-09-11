@@ -1,3 +1,5 @@
+import { assessModelTraceCompleteness } from './model-trace-completeness.js';
+
 const TRACE_ID = /^(?!0{32}$)[0-9a-f]{32}$/;
 const SPAN_ID = /^(?!0{16}$)[0-9a-f]{16}$/;
 
@@ -208,6 +210,9 @@ function semanticErrors(records) {
 }
 
 export function assessJobTraceCompleteness(records) {
+  if (Array.isArray(records) && records.some(({ event_name: eventName }) => eventName === 'model.invocation.created')) {
+    return assessModelTraceCompleteness(records);
+  }
   const errors = [];
   if (!Array.isArray(records) || records.length === 0) {
     return { complete: false, missing: ['job.submission.received'], errors: ['trace has no evidence'] };

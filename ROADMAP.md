@@ -38,12 +38,20 @@ This roadmap is **directional**. It communicates project intent to contributors 
 - whole-record 4-item / 2,048-code-point context packaging;
 - Relay-linked evidence and trace completeness.
 
+### PX-005 — Pixel Model Gateway ✅
+
+- Relay-owned immutable `SYSTEM_STATUS_SUMMARY` invocation bound to an approved Memory package;
+- exact read-only operation eligibility kept separate from placement;
+- deterministic `simulation → Fake Model A` and `dev → Fake Model B` routing;
+- fixed Pixel instruction with pre/post Pixel Alpha token-unit caps;
+- unsafe/malformed adapter output rejection and no fallback;
+- truthful model provenance, Relay-owned terminal results, and causal evidence.
+
 ## Next Alpha direction
 
 The next implementation milestone should remain separately authorized and simulator-first. Candidate areas include:
 
-- model/runtime gateway with replaceable local/cloud provider adapters;
-- binding approved context packages to workers without making the model an authority;
+- additional separately reviewed simulator-first operational slices;
 - richer Mission Control owner visibility for jobs, Memory, reviews, and incidents;
 - persistent Pixel employee identities independent of model/harness sessions;
 - stronger release/recovery evidence and additional simulator-backed infrastructure domains.

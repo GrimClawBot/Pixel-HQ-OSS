@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-model-gateway-outcome-v1.schema.json",
+  "title": "Pixel Model Gateway Outcome v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome_id", "event_name", "schema_version", "created_at", "environment", "trace_id", "span_id", "job_id", "execution_id", "invocation_id", "operation", "status", "reason_code", "route_decision_id", "placement", "context", "output", "provenance"],
+  "properties": {
+    "outcome_id": { "$ref": "#/$defs/identifier" }, "event_name": { "const": "pixel.model.gateway-outcome.v1" }, "schema_version": { "const": "1.0.0" },
+    "created_at": { "$ref": "#/$defs/timestamp" }, "environment": { "$ref": "#/$defs/environment" }, "trace_id": { "$ref": "#/$defs/trace_id" }, "span_id": { "$ref": "#/$defs/span_id" },
+    "job_id": { "$ref": "#/$defs/identifier" }, "execution_id": { "$ref": "#/$defs/identifier" }, "invocation_id": { "$ref": "#/$defs/identifier" }, "operation": { "const": "SYSTEM_STATUS_SUMMARY" },
+    "status": { "enum": ["SUCCEEDED", "FAILED"] },
+    "reason_code": { "enum": ["MODEL_OUTPUT_AVAILABLE", "OPERATION_INELIGIBLE", "ROUTE_UNSUPPORTED", "EMPTY_CONTEXT", "INPUT_BUDGET_EXCEEDED", "ADAPTER_UNAVAILABLE", "PROVIDER_RESULT_INVALID", "OUTPUT_BUDGET_EXCEEDED"] },
+    "route_decision_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+    "placement": { "oneOf": [{ "$ref": "#/$defs/placement" }, { "type": "null" }] },
+    "context": { "type": "object", "additionalProperties": false, "required": ["package_id", "package_hash"], "properties": { "package_id": { "$ref": "#/$defs/identifier" }, "package_hash": { "$ref": "#/$defs/hash" } } },
+    "output": { "oneOf": [{ "$ref": "#/$defs/output" }, { "type": "null" }] },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["model_gateway_contract"], "properties": { "model_gateway_contract": { "const": "pixel.model-gateway.v1" } } }
+  },
+  "oneOf": [
+    { "properties": { "status": { "const": "SUCCEEDED" }, "reason_code": { "const": "MODEL_OUTPUT_AVAILABLE" }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "$ref": "#/$defs/placement" }, "output": { "$ref": "#/$defs/output" } } },
+    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "const": "OPERATION_INELIGIBLE" }, "route_decision_id": { "type": "null" }, "placement": { "type": "null" }, "output": { "type": "null" } } },
+    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "const": "ROUTE_UNSUPPORTED" }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "type": "null" }, "output": { "type": "null" } } },
+    { "properties": { "status": { "const": "FAILED" }, "reason_code": { "enum": ["EMPTY_CONTEXT", "INPUT_BUDGET_EXCEEDED", "ADAPTER_UNAVAILABLE", "PROVIDER_RESULT_INVALID", "OUTPUT_BUDGET_EXCEEDED"] }, "route_decision_id": { "$ref": "#/$defs/identifier" }, "placement": { "$ref": "#/$defs/placement" }, "output": { "type": "null" } } }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }, "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" }, "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }, "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "placement": { "type": "object", "additionalProperties": false, "required": ["runtime_id", "model_id", "source"], "properties": { "runtime_id": { "$ref": "#/$defs/identifier" }, "model_id": { "$ref": "#/$defs/identifier" }, "source": { "enum": ["simulator", "live"] } } },
+    "output": { "type": "object", "additionalProperties": false, "required": ["text", "hash", "token_units"], "properties": { "text": { "type": "string", "minLength": 1, "maxLength": 512 }, "hash": { "$ref": "#/$defs/hash" }, "token_units": { "type": "integer", "minimum": 1 } } }
+  }
+}

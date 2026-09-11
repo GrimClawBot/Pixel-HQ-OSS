@@ -6,6 +6,7 @@ import {
   validateToolCapabilityDecisionV1,
   validateToolExecutionRequestV1,
 } from '../../packages/contracts/src/job-v1.js';
+import { hashInstructionTemplateBinding, SYSTEM_STATUS_SUMMARY_TEMPLATE } from '../../packages/contracts/src/model-v1.js';
 
 const TRACE_ID = '1234567890abcdef1234567890abcdef';
 const NOW = '2026-09-07T12:00:00.000Z';
@@ -111,6 +112,56 @@ function decision(request = executionRequest(), overrides = {}) {
       tool_gateway_contract: 'pixel.tool-gateway.v1',
       grant_provider_contract: 'pixel.capability-grant-provider.v1',
       grant_source: 'simulator',
+    },
+    ...overrides,
+  };
+}
+
+function modelInvocation(overrides = {}) {
+  return {
+    invocation_id: 'invocation-001',
+    event_name: 'pixel.model.invocation.v1',
+    schema_version: '1.0.0',
+    created_at: NOW,
+    environment: 'simulation',
+    trace_id: TRACE_ID,
+    span_id: '4444444444444444',
+    job_id: 'job-001',
+    execution_id: 'execution-001',
+    operation: 'SYSTEM_STATUS_SUMMARY',
+    execution: {
+      job_type: 'system-status', capability: 'pixel.system-status.read',
+      tool_class: 'pixel.system-status', target: 'pixel.platform',
+    },
+    pixel_agent_binding: {
+      agent_id: BINDING.worker_id,
+      department_ref: BINDING.department_ref,
+      role_ref: BINDING.role_ref,
+    },
+    instruction: {
+      template_id: SYSTEM_STATUS_SUMMARY_TEMPLATE.template_id,
+      version: SYSTEM_STATUS_SUMMARY_TEMPLATE.version,
+      hash: hashInstructionTemplateBinding(SYSTEM_STATUS_SUMMARY_TEMPLATE),
+    },
+    context: {
+      package_id: 'package-001', package_hash: 'c'.repeat(64), item_count: 1,
+      text_chars: 21, input_token_units: 32,
+    },
+    provenance: { relay_contract: 'pixel.relay.v1' },
+    ...overrides,
+  };
+}
+
+function modelResult(overrides = {}) {
+  return {
+    result_id: 'result-model-001', event_name: 'pixel.job.result.v1', schema_version: '1.0.0',
+    completed_at: NOW, environment: 'simulation', trace_id: TRACE_ID, span_id: '7777777777777777',
+    job_id: 'job-001', execution_id: 'execution-001', state: 'COMPLETED',
+    outcome_code: 'SYSTEM_STATUS_AVAILABLE', summary: 'Pixel system status is available.',
+    provenance: {
+      relay_contract: 'pixel.relay.v1', model_gateway_contract: 'pixel.model-gateway.v1',
+      model_invocation_id: 'invocation-001', model_runtime_id: 'pixel.simulator.model-runtime-a',
+      model_id: 'pixel.fake-model-a.v1', model_source: 'simulator',
     },
     ...overrides,
   };
@@ -350,4 +401,38 @@ test('a DENY decision cannot be used to commit a completed result', async () => 
     'job-001', completedTransition, completedResult,
   )).disposition, 'REJECTED');
   assert.equal((await store.getJob('job-001')).current_state, 'RUNNING');
+});
+
+test('model invocation claim is atomic, exact, and mutually exclusive with PX-003 claims', async () => {
+  const store = await runningStore();
+  const invocation = modelInvocation();
+  const claims = await Promise.all(Array.from({ length: 25 }, () => store.claimModelInvocation('job-001', invocation)));
+
+  assert.equal(claims.filter(({ disposition }) => disposition === 'INVOKE_NOW').length, 1);
+  assert.equal(claims.filter(({ disposition }) => disposition === 'ALREADY_CLAIMED').length, 24);
+  assert.equal((await store.getJob('job-001')).model_invocation_claimed, true);
+  assert.deepEqual((await store.getJob('job-001')).model_invocation, invocation);
+  assert.equal((await store.claimModelInvocation('job-001', modelInvocation({ invocation_id: 'invocation-other' }))).disposition, 'REJECTED');
+  assert.equal((await store.claimModelInvocation('job-001', modelInvocation({ job_id: 'job-other' }))).disposition, 'REJECTED');
+
+  const request = executionRequest();
+  const allow = decision(request);
+  assert.equal((await store.recordGatewayDecision('job-001', request, allow)).disposition, 'REJECTED');
+  assert.equal((await store.claimWorkerInvocation('job-001', request, allow)).disposition, 'REJECTED');
+});
+
+test('claimed model invocation authorizes only a model-bound terminal result', async () => {
+  const store = await runningStore();
+  const invocation = modelInvocation();
+  assert.equal((await store.claimModelInvocation('job-001', invocation)).disposition, 'INVOKE_NOW');
+  const terminal = transition({
+    id: 'transition-model-003', from: 'RUNNING', to: 'COMPLETED',
+    reason: 'EXECUTION_COMPLETED', executionId: 'execution-001', span: '6666666666666666',
+  });
+
+  assert.equal((await store.commitTerminalResult('job-001', terminal, modelResult({
+    provenance: { ...modelResult().provenance, model_invocation_id: 'invocation-other' },
+  }))).disposition, 'REJECTED');
+  assert.equal((await store.commitTerminalResult('job-001', terminal, modelResult())).disposition, 'COMMITTED');
+  assert.equal((await store.getJob('job-001')).current_state, 'COMPLETED');
 });

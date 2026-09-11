@@ -65,6 +65,14 @@ All values in this walkthrough are synthetic and in-memory. It demonstrates exis
 
 ## 5. What the test suite is proving
 
+Run the focused PX-005 simulator slice:
+
+```bash
+node --test tests/integration/model-gateway-vertical-slice.test.js
+```
+
+This follows the accepted Relay job through an approved immutable Memory package, `ACCEPTED → RUNNING`, a Relay-created invocation, exact operation eligibility, deterministic Fake Model A/B placement, Pixel Alpha input/output budgets, a bounded Gateway outcome, and a Relay-owned terminal result. It also proves raw capability, empty package, malformed result, and concurrent execution failures invoke no fallback and cannot give Model Gateway lifecycle authority.
+
 The public suite includes contract, integration, security, UI, and evidence coverage for the completed Alpha slices. In particular, the source demonstrates that:
 
 - unknown/forged authority fields do not become canonical server state;
@@ -74,6 +82,8 @@ The public suite includes contract, integration, security, UI, and evidence cove
 - Relay acceptance is idempotent and canonical job state is server-owned;
 - Tool Gateway resolves execution-time capability authority;
 - worker results and evidence are bounded;
+- model/runtime identity remains separate from Pixel agent identity;
+- callers and model text cannot supply prompts, routing, authority, or lifecycle state;
 - repeated reads do not rewrite canonical execution history.
 
 ## 6. Safe experimentation

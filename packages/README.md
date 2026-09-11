@@ -6,10 +6,14 @@ Hardware-facing packages must preserve the SimulatorAdapter -> LiveAdapter contr
 
 ## Current implementation
 
-- `contracts/` owns the versioned device, access, Relay job, Tool Gateway, and job-result contracts, JSON Schemas, and runtime validation. Browser/client intent contracts remain non-authoritative.
-- `adapter-sdk/` owns the shared `readSnapshot()` device boundary; separate Identity/DeviceTrust providers; and the PX-003 job-context, grant, Relay-store, and worker seams.
+- `contracts/` owns the versioned device, access, Relay job, Tool Gateway, model invocation/provider/outcome, and job-result contracts, JSON Schemas, and runtime validation. Browser/client intent contracts remain non-authoritative.
+- `adapter-sdk/` owns the shared `readSnapshot()` device boundary; separate Identity/DeviceTrust providers; PX-003 job-context, grant, Relay-store, and worker seams; and the unsafe-data-rejecting PX-005 model runtime seam.
 - `registry/` owns the declarative `PIXEL-STORAGE-01` role and an authority-provenanced declarative representation used to validate and resolve exact signed Organization Registry references. It does not replace the signed Organization Registry.
-- `telemetry/` owns deep-frozen append-oriented structured evidence and canonical, outcome-specific trace completeness checks for device, access, and job paths.
+- `telemetry/` owns deep-frozen append-oriented structured evidence and canonical, outcome-specific trace completeness checks for device, access, worker-job, Memory, and model-job paths.
+
+### PX-005 contract set
+
+Five strict model contracts cover Relay-owned invocation, route decision, least-privilege provider request, untrusted provider result, and bounded Gateway outcome. Canonical binding helpers use SHA-256 over documented UTF-8 canonical JSON; token helpers reuse Memory tokenization and do not claim vendor equivalence.
 
 ### PX-003 contract set
 

@@ -76,6 +76,19 @@ export function assertRelayStoreAdapter(value) {
   return value;
 }
 
+export function assertModelJobLookupAdapter(value) {
+  return assertProvider(value, 'getJob', 'Model job lookup adapter');
+}
+
+export function assertModelRelayStoreAdapter(value) {
+  assertRelayStoreAdapter(value);
+  const methods = ['claimModelContextPreparation', 'claimModelInvocation'];
+  if (methods.some((method) => typeof value[method] !== 'function')) {
+    throw new TypeError(`Model Relay store adapter must implement ${methods.join(', ')}`);
+  }
+  return value;
+}
+
 export function validateJobContext(value) {
   const errors = [];
   if (!isRecord(value)) return { ok: false, errors: ['job context must be an object'] };
