@@ -1,3 +1,6 @@
+import { MissionControlOverviewProjector } from './overview-projector.js';
+import { createOverviewSources } from './overview-sources.js';
+import { createOverviewHttpHandler } from './overview-http.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
@@ -22,6 +25,11 @@ import { RelayService } from '../../../services/relay/src/relay-service.js';
 import { ToolGateway } from '../../../services/tool-gateway/src/tool-gateway.js';
 
 const STATIC_FILES = new Map([
+  ['/overview.js', { url: new URL('../public/overview.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
+  ['/assets/overview-view.js', { url: new URL('./overview-view.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
+  ['/assets/overview-controller.js', { url: new URL('./overview-controller.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
+  ['/assets/overview-contract.js', { url: new URL('./overview-contract.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
+
   ['/', { url: new URL('../public/index.html', import.meta.url), type: 'text/html; charset=utf-8' }],
   ['/styles.css', { url: new URL('../public/styles.css', import.meta.url), type: 'text/css; charset=utf-8' }],
   ['/storage-card.js', { url: new URL('../public/storage-card.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
@@ -91,6 +99,12 @@ export async function createMilestoneRuntime({
   jobGrantProvider = null,
   jobStore = null,
   jobWorker = null,
+  overviewFreshness = null,
+  overviewSources = {},
+  orgState = null,
+  incidents = null,
+  workforce = null,
+  overviewSourceMode = null,
   clock = () => new Date().toISOString(),
   ids = defaultIds(),
 }) {
@@ -159,6 +173,11 @@ export async function createMilestoneRuntime({
   });
   projector.accept(event);
 
+  const overview = new MissionControlOverviewProjector({
+    sources: { ...createOverviewSources({ projector, relay, orgState, incidents, workforce, sourceMode: overviewSourceMode, clock }), ...overviewSources },
+    freshness: overviewFreshness, clock,
+  });
+  const overviewHandler = createOverviewHttpHandler(overview);
   const staticHandler = createStaticHandler();
   const server = createPixelHttpServer({
     projector,
@@ -166,13 +185,15 @@ export async function createMilestoneRuntime({
     requesterContext: ENGINEERING_SIMULATED_REQUESTER,
     ids,
     fallbackHandler: (request, response, url) => (
-      relayHandler(request, response, url)
+      overviewHandler(request, response, url)
+      || relayHandler(request, response, url)
       || accessHandler(request, response, url)
       || staticHandler(request, response, url)
     ),
   });
 
   return Object.freeze({
+    overview,
     accessDeviceTrustProvider: deviceTrustProvider,
     accessGate,
     accessIdentityProvider: identityProvider,

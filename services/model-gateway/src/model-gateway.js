@@ -28,6 +28,7 @@ import { evaluateModelOperationEligibility } from '../../policy/src/model-operat
 import { selectAlphaModelRoute } from '../../policy/src/model-routing-policy.js';
 
 const ENVIRONMENTS = new Set(['dev', 'simulation', 'shadow', 'canary', 'production']);
+const SIMULATOR_ENVIRONMENTS = new Set(['dev', 'simulation']);
 const INPUT_FIELDS = new Set(['invocation', 'parentSpanId']);
 
 function deepFreeze(value) {
@@ -68,6 +69,9 @@ function requireDependencies({ environment, store, memory, adapters, evidence, i
   }
   if (!Array.isArray(adapters)) throw new TypeError('Model Gateway requires an adapter registry array');
   for (const adapter of adapters) assertModelRuntimeAdapter(adapter);
+  if (adapters.some(({ source }) => source === 'simulator') && !SIMULATOR_ENVIRONMENTS.has(environment)) {
+    throw new RangeError('Simulator model runtimes may run only in dev or simulation');
+  }
   if (!evidence || typeof evidence.append !== 'function') throw new TypeError('Model Gateway requires evidence');
   if (!ids || typeof ids.nextEventId !== 'function' || typeof ids.nextSpanId !== 'function') {
     throw new TypeError('Model Gateway requires event and span ID sources');

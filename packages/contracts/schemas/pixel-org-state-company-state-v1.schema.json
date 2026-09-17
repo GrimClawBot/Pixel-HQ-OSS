@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-org-state-company-state-v1.schema.json",
+  "title": "Pixel Company State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "company_state_id",
+    "event_name",
+    "schema_version",
+    "revision",
+    "generated_at",
+    "state",
+    "cause_refs",
+    "constraints",
+    "provenance"
+  ],
+  "properties": {
+    "company_state_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.org-state.company-state.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "state": {
+      "enum": [
+        "SURVIVAL",
+        "SECURITY_INCIDENT",
+        "INFRASTRUCTURE_OR_ENVIRONMENT_INCIDENT",
+        "MAINTENANCE",
+        "HOLIDAY",
+        "NIGHT",
+        "NORMAL"
+      ]
+    },
+    "cause_refs": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "maxLength": 160
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org_state_contract"
+      ],
+      "properties": {
+        "org_state_contract": {
+          "const": "pixel.organizational-state.v1"
+        }
+      }
+    }
+  }
+}

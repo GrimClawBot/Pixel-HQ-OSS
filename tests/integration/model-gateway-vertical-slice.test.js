@@ -466,3 +466,26 @@ test('successful model execution produces one complete bounded causal evidence f
   inputBudget.severity = 'warning';
   assert.equal(assessModelTraceCompleteness(deniedInputWithProvider).complete, false);
 });
+
+test('a rejected repeat attempt keeps the completed model trace complete', async () => {
+  const runtime = modelRelayRuntime();
+  const accepted = await runtime.prepare();
+  const response = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+  assert.equal(response.disposition, 'COMPLETED');
+  assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
+
+  const repeat = await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+  assert.equal(repeat.disposition, 'INVALID_STATE');
+  const records = runtime.evidence.forTrace(response.trace_id);
+  assert.equal(records.at(-1).event_name, 'relay.transition.rejected');
+  assert.equal(assessModelTraceCompleteness(records).complete, true);
+  assert.deepEqual(assessJobTraceCompleteness(records), { complete: true, missing: [], errors: [] });
+
+  await runtime.relay.executeModelSummary(accepted.job.envelope.job_id);
+  assert.equal(assessModelTraceCompleteness(runtime.evidence.forTrace(response.trace_id)).complete, true);
+
+  const relocated = structuredClone(runtime.evidence.forTrace(response.trace_id));
+  const rejected = relocated.pop();
+  relocated.splice(3, 0, rejected);
+  assert.equal(assessModelTraceCompleteness(relocated).complete, false);
+});

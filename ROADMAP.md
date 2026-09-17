@@ -2,7 +2,9 @@
 
 This roadmap is **directional**. It communicates project intent to contributors and evaluators, but it does not authorize implementation by itself. Security, architecture, and release gates still apply.
 
-## Shipped public Alpha
+## Reviewed public Alpha candidate
+
+Public `main` currently contains PX-001 through PX-005. The sections marked **candidate** below are part of the reviewed OSS-006 export candidate and are not yet public.
 
 ### PX-001 — Device state ✅
 
@@ -47,14 +49,56 @@ This roadmap is **directional**. It communicates project intent to contributors 
 - unsafe/malformed adapter output rejection and no fallback;
 - truthful model provenance, Relay-owned terminal results, and causal evidence.
 
+### PX-006 — Organizational State + Scheduler ✅
+
+- canonical approvals, delegations, holds, duty, capacity, and derived Company State;
+- Trusted Time expiry checks and optimistic revision guards;
+- fail-closed `ELIGIBLE` / `WAIT` / `HOLD` / `DENY` decisions;
+- lease-bounded capacity reservations and stage-two start confirmation;
+- Relay-terminal Memory package cleanup without creating a second lifecycle engine.
+
+### PX-007 — Incident + degraded state ✅
+
+- canonical incident truth with exactly one commander and bounded lifecycle;
+- deterministic environmental normalization and Company State composition;
+- incident-linked holds through existing Organizational State classes;
+- stage-two incident safety rechecks before Relay enters `RUNNING`;
+- bounded incident evidence and fail-closed seam behavior.
+
+### PX-008 — Company calendar + recurring work ✅ candidate
+
+- half-open company calendar events and local weekly operating windows;
+- deterministic holidays, maintenance, and incident-precedence composition;
+- immutable recurring-template revisions and deterministic occurrence identity;
+- canonical Relay submission with no hidden execution or second lifecycle engine;
+- bounded missed-run, replay, overlap, and checkpoint handling.
+
+### PX-009 — Workforce + AgentOps ✅ candidate
+
+- persistent synthetic Pixel employee identity independent of model, provider, harness, or session;
+- lifecycle and role/department history with optimistic revision protection;
+- per-capability qualification with Trusted Time expiry and no authorization minting;
+- causal attribution and bounded evidence over canonical Workforce records;
+- deterministic AgentOps projections and stage-two Workforce eligibility rechecks.
+
+### PX-010 — Mission Control Home ✅ candidate
+
+- read-only Company Pulse overview over canonical device, Relay, Organizational State, Incident, and Workforce seams;
+- exact decimal freshness ordering with browser-side BigInt comparison;
+- bounded projections, source modes, and explicit unavailable/stale/failed/denied/unknown states;
+- isolated section failures, no raw payloads, and no UI-created authority;
+- responsive, keyboard-navigable, mobile-friendly, and accessibility-tested owner surface.
+
 ## Next Alpha direction
 
 The next implementation milestone should remain separately authorized and simulator-first. Candidate areas include:
 
 - additional separately reviewed simulator-first operational slices;
-- richer Mission Control owner visibility for jobs, Memory, reviews, and incidents;
-- persistent Pixel employee identities independent of model/harness sessions;
+- separately authorized richer owner surfaces;
+- production Workforce identity integration;
 - stronger release/recovery evidence and additional simulator-backed infrastructure domains.
+
+**PX-011 and later milestones are not part of this public candidate.** They remain private and reach this repository only through separate, owner-gated public-sync revisions that pass the same default-deny export, review, and validation gates.
 
 ## Pixel Office direction
 

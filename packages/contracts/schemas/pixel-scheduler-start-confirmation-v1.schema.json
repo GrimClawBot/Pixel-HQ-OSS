@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-scheduler-start-confirmation-v1.schema.json",
+  "title": "Pixel Scheduler Start Confirmation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "confirmation_id",
+    "event_name",
+    "schema_version",
+    "confirmed_at",
+    "job_id",
+    "execution_id",
+    "reservation_id",
+    "outcome",
+    "reason_code",
+    "policy_id",
+    "provenance"
+  ],
+  "properties": {
+    "confirmation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.scheduler.start-confirmation.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "execution_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "outcome": {
+      "enum": [
+        "CONFIRMED",
+        "REJECTED"
+      ]
+    },
+    "reason_code": {
+      "enum": [
+        "START_CONFIRMED",
+        "START_REJECTED_JOB_STATE",
+        "START_REJECTED_RESERVATION",
+        "START_REJECTED_HOLD",
+        "START_REJECTED_COMPANY_STATE",
+        "START_REJECTED_DUTY",
+        "START_REJECTED_CAPACITY",
+        "START_REJECTED_APPROVAL",
+        "START_REJECTED_DELEGATION",
+        "START_REJECTED_ENVIRONMENT",
+        "START_REJECTED_AUTHORITY",
+        "START_REJECTED_RESOURCE",
+        "START_REJECTED_NOT_BEFORE",
+        "START_REJECTED_REVISION",
+        "START_REJECTED_DEPENDENCY",
+        "START_REJECTED_WORKFORCE",
+        "START_REJECTED_INPUT_INVALID"
+      ]
+    },
+    "policy_id": {
+      "const": "pixel.scheduler.alpha.v1"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheduler_contract"
+      ],
+      "properties": {
+        "scheduler_contract": {
+          "const": "pixel.scheduler.v1"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "CONFIRMED"
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "const": "START_CONFIRMED"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "REJECTED"
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "START_REJECTED_JOB_STATE",
+              "START_REJECTED_RESERVATION",
+              "START_REJECTED_HOLD",
+              "START_REJECTED_COMPANY_STATE",
+              "START_REJECTED_DUTY",
+              "START_REJECTED_CAPACITY",
+              "START_REJECTED_APPROVAL",
+              "START_REJECTED_DELEGATION",
+              "START_REJECTED_ENVIRONMENT",
+              "START_REJECTED_AUTHORITY",
+              "START_REJECTED_RESOURCE",
+              "START_REJECTED_NOT_BEFORE",
+              "START_REJECTED_REVISION",
+              "START_REJECTED_DEPENDENCY",
+        "START_REJECTED_WORKFORCE",
+              "START_REJECTED_INPUT_INVALID"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-recurring-checkpoint-v1.schema.json",
+  "title": "Pixel Recurring Checkpoint v1",
+  "required": [
+    "checkpoint_id",
+    "event_name",
+    "schema_version",
+    "template_id",
+    "last_evaluated_at",
+    "revision",
+    "updated_at",
+    "provenance"
+  ],
+  "properties": {
+    "checkpoint_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.recurring-checkpoint.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "template_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "last_evaluated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calendar_contract"
+      ],
+      "properties": {
+        "calendar_contract": {
+          "const": "pixel.calendar.v1"
+        }
+      }
+    }
+  }
+}

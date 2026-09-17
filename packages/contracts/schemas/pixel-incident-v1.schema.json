@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-incident-v1.schema.json",
+  "title": "Pixel Incident v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "incident_id", "event_name", "schema_version", "status", "revision",
+    "opened_at", "declared_at", "acknowledged_at", "resolved_at", "closed_at",
+    "incident_class", "severity", "commander_ref", "response_phase", "recovery_state",
+    "current_impact_code", "source_ref", "summary_code",
+    "affected_resource_refs", "affected_job_refs", "evidence_refs",
+    "remaining_risk_code", "commander_transfers", "provenance"
+  ],
+  "properties": {
+    "incident_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+    "event_name": { "const": "pixel.incident.v1" },
+    "schema_version": { "const": "1.0.0" },
+    "status": { "enum": ["OPEN", "RESOLVED", "CLOSED"] },
+    "revision": { "type": "integer", "minimum": 1 },
+    "opened_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "declared_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "acknowledged_at": { "oneOf": [{ "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }, { "type": "null" }] },
+    "resolved_at": { "oneOf": [{ "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }, { "type": "null" }] },
+    "closed_at": { "oneOf": [{ "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }, { "type": "null" }] },
+    "incident_class": { "enum": ["SECURITY", "INFRASTRUCTURE", "POWER", "THERMAL"] },
+    "severity": { "enum": ["SEV-3", "SEV-2", "SEV-1", "SEV-0"] },
+    "commander_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+    "response_phase": { "enum": ["DECLARE", "CONTAIN", "PRESERVE_EVIDENCE", "DIAGNOSE", "REMEDIATE", "RECOVER", "VERIFY", "CLOSE", "POST_INCIDENT_REVIEW"] },
+    "recovery_state": { "enum": ["NONE", "CONTAINED", "RECOVERING", "VERIFYING", "RECOVERED"] },
+    "current_impact_code": { "enum": ["LOCALIZED", "MEANINGFUL_DEGRADATION", "MAJOR", "CRITICAL"] },
+    "source_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+    "summary_code": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "affected_resource_refs": {
+      "type": "array", "maxItems": 16, "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 }
+    },
+    "affected_job_refs": {
+      "type": "array", "maxItems": 16, "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 }
+    },
+    "evidence_refs": {
+      "type": "array", "maxItems": 16, "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 }
+    },
+    "remaining_risk_code": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 80 }, { "type": "null" }] },
+    "commander_transfers": {
+      "type": "array", "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["prior_commander_ref", "new_commander_ref", "reason_code", "actor_ref", "transferred_at", "revision"],
+        "properties": {
+          "prior_commander_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+          "new_commander_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+          "reason_code": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+          "actor_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+          "transferred_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+          "revision": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["incident_contract"],
+      "properties": { "incident_contract": { "const": "pixel.incident.v1" } }
+    }
+  }
+}

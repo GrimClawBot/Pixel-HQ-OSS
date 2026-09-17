@@ -9,6 +9,7 @@ import {
 } from '../../packages/contracts/src/model-v1.js';
 import { EvidenceRecorder } from '../../packages/telemetry/src/evidence-recorder.js';
 import { ModelGateway } from '../../services/model-gateway/src/model-gateway.js';
+import { RelayService } from '../../services/relay/src/relay-service.js';
 
 const NOW = '2026-09-09T12:00:00.000Z';
 const TRACE_ID = '1234567890abcdef1234567890abcdef';
@@ -77,18 +78,25 @@ function jobFor(invocation, source) {
   };
 }
 
-function adapter({ calls, output = 'bounded output', claimedUnits = 2, accessor = false } = {}) {
+function adapter({ calls, output = 'bounded output', claimedUnits = 2, accessor = false, resultId = 'provider-result-001', lengthAccessor = false } = {}) {
   return {
     source: 'simulator', providerContract: 'pixel.model-runtime.adapter.v1',
     runtimeId: 'pixel.simulator.model-runtime-a', modelId: 'pixel.fake-model-a.v1',
     invoke(request) {
       calls.count += 1;
       const value = {
-        provider_result_id: 'provider-result-001', schema_version: '1.0.0', invocation_id: request.invocation_id,
+        provider_result_id: resultId, schema_version: '1.0.0', invocation_id: request.invocation_id,
         provider_contract: 'pixel.model-runtime.adapter.v1', runtime_id: this.runtimeId,
         model_id: this.modelId, source: this.source, status: 'OUTPUT_AVAILABLE',
         output_text: output, output_token_units: claimedUnits,
       };
+      if (lengthAccessor) {
+        let reads = 0;
+        value.length = {};
+        Object.defineProperty(value.length, 'hidden', { enumerable: true, get() { reads += 1; return 'x'; } });
+        calls.accessorReads = () => reads;
+        return value;
+      }
       if (!accessor) return value;
       let reads = 0;
       const unsafe = { ...value };
@@ -178,4 +186,80 @@ test('output over the selected route cap is rejected and never invokes another m
   assert.equal(outcome.reason_code, 'OUTPUT_BUDGET_EXCEEDED');
   assert.equal(selected.count, 1);
   assert.equal(fallback.count, 0);
+});
+
+test('over-long provider result identifiers fail closed without recording provider evidence', async () => {
+  const calls = { count: 0 };
+  const subject = runtime({ adapters: [adapter({ calls, resultId: 'r'.repeat(65) })] });
+  const outcome = await subject.gateway.invoke({ invocation: subject.invocation, parentSpanId: subject.invocation.span_id });
+  assert.equal(outcome.reason_code, 'PROVIDER_RESULT_INVALID');
+  assert.equal(calls.count, 1);
+  assert.equal(subject.evidence.all().some(({ event_name }) => event_name === 'model.provider.result_validated'), false);
+});
+
+test('accessors nested under a result length key fail closed without executing', async () => {
+  const calls = { count: 0 };
+  const subject = runtime({ adapters: [adapter({ calls, lengthAccessor: true })] });
+  const outcome = await subject.gateway.invoke({ invocation: subject.invocation, parentSpanId: subject.invocation.span_id });
+  assert.equal(outcome.reason_code, 'PROVIDER_RESULT_INVALID');
+  assert.equal(calls.accessorReads(), 0);
+});
+
+test('simulator model runtimes are rejected outside dev and simulation at construction', () => {
+  const build = (environment) => new ModelGateway({
+    environment,
+    store: { source: 'live', getJob() {} },
+    memory: { getApprovedContextPackage() {} },
+    adapters: [adapter({ calls: { count: 0 } })],
+    evidence: new EvidenceRecorder({ clock: () => NOW }),
+    ids: makeIds(),
+    clock: () => NOW,
+  });
+  assert.throws(() => build('shadow'), /Simulator model runtimes may run only in dev or simulation/);
+  assert.throws(() => build('canary'), /Simulator model runtimes may run only in dev or simulation/);
+  assert.throws(() => build('production'), /Simulator model runtimes may run only in dev or simulation/);
+  assert.doesNotThrow(() => build('simulation'));
+  assert.doesNotThrow(() => build('dev'));
+});
+
+test('simulator-sourced memory or model gateway is rejected by Relay outside dev and simulation', () => {
+  const store = {
+    source: 'live',
+    getJob() {}, claimOrReturnExisting() {}, applyTransition() {}, recordGatewayDecision() {},
+    claimWorkerInvocation() {}, claimModelContextPreparation() {}, releaseModelContextPreparation() {},
+    claimModelInvocation() {}, commitTerminalResult() {},
+  };
+  const base = {
+    environment: 'shadow',
+    contextProvider: { source: 'live', resolveJobContext() {} },
+    store,
+    toolGateway: { source: 'live', async execute() {} },
+    memory: { source: 'simulator', buildContext() {}, getApprovedContextPackage() {} },
+    modelGateway: { source: 'live', async invoke() {} },
+    evidence: { append() {} },
+    ids: {
+      nextEventId: () => 'event-1', nextJobId: () => 'job-1', nextExecutionId: () => 'execution-1',
+      nextSpanId: () => 'a'.repeat(16), nextTraceId: () => 'b'.repeat(32),
+    },
+    clock: () => NOW,
+  };
+  for (const environment of ['shadow', 'canary', 'production']) {
+    assert.throws(() => new RelayService({ ...base, environment }),
+      /Simulator Relay adapters may run only in dev or simulation/, environment);
+    assert.throws(() => new RelayService({
+      ...base,
+      environment,
+      memory: { source: 'live', buildContext() {}, getApprovedContextPackage() {} },
+      modelGateway: { source: 'simulator', async invoke() {} },
+    }), /Simulator Relay adapters may run only in dev or simulation/, `${environment} gateway`);
+  }
+  for (const environment of ['dev', 'simulation']) {
+    assert.doesNotThrow(() => new RelayService({
+      ...base,
+      environment,
+      contextProvider: { source: 'simulator', resolveJobContext() {} },
+      toolGateway: { source: 'simulator', async execute() {} },
+      modelGateway: { source: 'simulator', async invoke() {} },
+    }), environment);
+  }
 });

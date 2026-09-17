@@ -210,6 +210,9 @@ function semanticErrors(records) {
 }
 
 export function assessJobTraceCompleteness(records) {
+  if (Array.isArray(records) && records.some((record) => record === null || typeof record !== 'object')) {
+    return { complete: false, missing: [], errors: ['trace contains malformed records'] };
+  }
   if (Array.isArray(records) && records.some(({ event_name: eventName }) => eventName === 'model.invocation.created')) {
     return assessModelTraceCompleteness(records);
   }

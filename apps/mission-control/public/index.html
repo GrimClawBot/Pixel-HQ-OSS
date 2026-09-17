@@ -1,40 +1,75 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
-    <title>Mission Control</title>
-    <link rel="stylesheet" href="/styles.css">
-    <script type="module" src="/storage-card.js"></script>
-    <script type="module" src="/access-card.js"></script>
-  </head>
-  <body>
-    <main id="mission-control">
-      <header class="page-heading">
-        <p>Mission Control</p>
-        <h1>Company Pulse</h1>
-      </header>
-
-      <section aria-labelledby="infrastructure-title">
-        <div class="section-heading">
-          <h2 id="infrastructure-title">Infrastructure</h2>
-          <p>Current storage readiness, verified by Pixel.</p>
-        </div>
-        <div id="storage-card-root" aria-live="polite" aria-busy="true">
-          <p class="loading-state">Checking storage…</p>
-        </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Pixel HQ · Mission Control</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/overview.js"></script>
+  <script type="module" src="/access-card.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#mission-control">Skip to Home</a>
+  <header class="topbar">
+    <button id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <a class="brand" href="/" aria-label="Pixel HQ Home"><span class="brand-mark" aria-hidden="true">P</span> Pixel HQ</a>
+    <span class="alpha-label">ALPHA</span>
+    <span id="global-state" class="global-state">Company UNKNOWN</span>
+    <span class="trust-state">Trust: check protected app</span>
+    <time id="local-time" aria-label="Local time"></time>
+    <button class="command" disabled>Pixel Command <span>Coming later</span></button>
+  </header>
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-label">MISSION CONTROL</div>
+    <nav aria-label="Mission Control">
+      <a class="nav-item selected" href="#mission-control" aria-current="page"><span aria-hidden="true">⌂</span> Home</a>
+      <button class="nav-item" disabled>Work <small>Future</small></button>
+      <button class="nav-item" disabled>Company <small>Future</small></button>
+      <button class="nav-item" disabled>Systems <small>Future</small></button>
+      <button class="nav-item" disabled>Security <small>Future</small></button>
+      <button class="nav-item" disabled>Labs <small>Future</small></button>
+      <button class="nav-item" disabled>Progress <small>Future</small></button>
+    </nav>
+    <section class="app-launcher" aria-labelledby="apps-label">
+      <h2 id="apps-label" class="sidebar-label">PIXEL APPS</h2>
+      <button class="nav-item" disabled>Office <small>Future</small></button>
+      <button class="nav-item" disabled>Reality <small>Future</small></button>
+      <a class="nav-item" href="#protected-apps-title">Bench <small>Check access ↗</small></a>
+      <button class="nav-item" disabled>Library <small>Future</small></button>
+      <button class="nav-item" disabled>Studio <small>Future</small></button>
+    </section>
+    <p class="sidebar-footer">Pixel HQ / Alpha<br><span>Mission Control Home</span></p>
+  </aside>
+  <main id="mission-control" tabindex="-1">
+    <div id="incident-banner" class="incident-banner" role="status"><p>Incident state UNKNOWN · Checking canonical source…</p></div>
+    <header class="page-heading">
+      <div><p class="eyebrow">YOUR OPERATING OVERVIEW</p><h1>Home</h1><p class="muted">The state of Pixel HQ, in one place.</p></div>
+      <div class="refresh-controls"><button id="refresh-overview">Refresh</button><p id="refresh-status" role="status">Loading overview…</p></div>
+    </header>
+    <div class="home-grid">
+      <section class="briefing card" aria-labelledby="briefing-title"><h2 id="briefing-title">HQ briefing</h2><div data-section="company" aria-busy="true"><p class="loading-state">Reading company state…</p></div></section>
+      <section class="hero card" aria-label="System overview">
+        <div class="hero-heading"><h2>System overview</h2><div class="hero-tabs" role="tablist" aria-label="Hero view">
+          <button id="tab-storage" role="tab" aria-selected="true" aria-controls="panel-storage" data-hero="storage">Storage</button>
+          <button id="tab-ai_compute" role="tab" aria-selected="false" aria-controls="panel-ai_compute" data-hero="ai_compute" tabindex="-1">AI Compute</button>
+        </div></div>
+        <div id="panel-storage" role="tabpanel" aria-labelledby="tab-storage" tabindex="0"><div id="storage-card-root" data-section="storage" aria-busy="true"><p class="loading-state">Checking storage…</p></div></div>
+        <div id="panel-ai_compute" role="tabpanel" aria-labelledby="tab-ai_compute" tabindex="0" hidden><h3>AI Compute Pool</h3><div data-section="ai_compute" aria-busy="true"><p class="loading-state">Checking compute source…</p></div></div>
+        <section id="panel-incident" aria-labelledby="incident-hero-title" hidden><h3 id="incident-hero-title">Incident Command</h3><div id="incident-hero-content"></div><p>Canonical incident presentation. Response actions remain with the Incident service.</p></section>
       </section>
-
-      <section class="protected-apps" aria-labelledby="protected-apps-title">
-        <div class="section-heading">
-          <h2 id="protected-apps-title">Protected apps</h2>
-          <p>Current launch access, verified by Pixel.</p>
-        </div>
-        <div id="access-card-root" aria-live="polite" aria-busy="true">
-          <p class="loading-state">Checking protected-app access…</p>
-        </div>
+      <section class="systems-grid" data-section="systems" aria-label="Logical system quick states" aria-busy="true">
+        <article class="card quick-card"><h3>CORE</h3><p>Loading…</p></article><article class="card quick-card"><h3>INFRA</h3><p>Loading…</p></article><article class="card quick-card"><h3>DEV</h3><p>Loading…</p></article><article class="card quick-card"><h3>MEDIA</h3><p>Loading…</p></article>
       </section>
-    </main>
-  </body>
+      <section class="card facilities" aria-labelledby="facilities-title"><h2 id="facilities-title">Facilities</h2><div data-section="facilities" aria-busy="true"><p>Checking power and thermal…</p></div></section>
+      <section class="card workforce" aria-labelledby="workforce-title"><h2 id="workforce-title">Company / Workforce</h2><div data-section="workforce" aria-busy="true"><p>Reading workforce…</p></div></section>
+      <section class="card needs-you" aria-labelledby="needs-title"><h2 id="needs-title">Needs You</h2><div data-section="needs_you" aria-busy="true"><p>Checking owner attention…</p></div></section>
+      <section class="card recent-work" aria-labelledby="work-title"><h2 id="work-title">Recent Work</h2><p class="muted">Canonical Relay lifecycle</p><div data-section="recent_work" aria-busy="true"><p>Reading recent work…</p></div></section>
+      <section class="card recent-activity" aria-labelledby="activity-title"><h2 id="activity-title">Recent Activity</h2><div data-section="recent_activity" aria-busy="true"><p>Reading activity…</p></div></section>
+    </div>
+    <section class="protected-apps" aria-labelledby="protected-apps-title"><div class="section-heading"><h2 id="protected-apps-title">Protected apps</h2><p>Launch access verified by Access Gate.</p></div><div id="access-card-root" aria-live="polite" aria-busy="true"><p class="loading-state">Checking protected-app access…</p></div></section>
+    <footer class="page-footer">Pixel HQ · Alpha <span>Read-only operating overview</span></footer>
+  </main>
+  <nav class="mobile-nav" aria-label="Mobile navigation"><a href="#mission-control" aria-current="page">Home</a><a href="#needs-title">Needs You</a><a href="#protected-apps-title">Pixel Apps</a><a href="#sidebar" id="mobile-more">More</a></nav>
+</body>
 </html>

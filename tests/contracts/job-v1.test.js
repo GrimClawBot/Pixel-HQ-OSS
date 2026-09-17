@@ -322,4 +322,21 @@ test('published schemas encode runtime cross-field decision, transition, and res
     import.meta.url,
   )));
   assert.equal(envelope.allOf[0].oneOf.length, 2);
+
+  const jobResult = JSON.parse(await readFile(new URL(
+    '../../packages/contracts/schemas/pixel-job-result-v1.schema.json',
+    import.meta.url,
+  )));
+  assert.equal(jobResult.allOf.length, 3);
+  const completedRule = jobResult.allOf[2];
+  assert.equal(completedRule.if.properties.state.const, 'COMPLETED');
+  assert.deepEqual(completedRule.if.properties.provenance.required, ['model_gateway_contract']);
+  assert.equal(completedRule.then.properties.provenance.$ref, '#/$defs/completed_model_provenance');
+  assert.deepEqual(jobResult.$defs.completed_model_provenance.required, [
+    'relay_contract', 'model_gateway_contract', 'model_invocation_id',
+    'model_runtime_id', 'model_id', 'model_source',
+  ]);
+  assert.equal(jobResult.$defs.completed_model_provenance.properties.model_runtime_id.$ref, '#/$defs/identifier');
+  assert.equal(jobResult.$defs.completed_model_provenance.properties.model_id.$ref, '#/$defs/identifier');
+  assert.equal(jobResult.$defs.completed_model_provenance.properties.model_source.const, 'simulator');
 });

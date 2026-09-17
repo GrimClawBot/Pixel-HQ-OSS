@@ -128,6 +128,7 @@ function requireDependencies({ environment, intakeContextProvider, memoryStore, 
 
 export class MemoryService {
   #approvedPackages = new Map();
+  #retention = new Map();
   #clock;
   #environment;
   #evidence;
@@ -151,6 +152,90 @@ export class MemoryService {
     if (typeof packageId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(packageId)) return null;
     const contextPackage = this.#approvedPackages.get(packageId);
     return contextPackage ? frozenCopy(contextPackage) : null;
+  }
+
+  // Issue #71: bounded approved-package retention coupled to Relay terminal
+  // truth. Relay alone decides that a job is terminal; Memory only releases
+  // what Relay has declared finished. Every package is tracked with its job
+  // and can be released exactly once. In-flight packages are never evicted.
+  retainPackage(contextPackage) {
+    this.#retention.set(contextPackage.package_id, {
+      job_id: contextPackage.job_id,
+      released: false,
+    });
+  }
+
+  releasePackageForJob(jobId) {
+    if (typeof jobId !== 'string' || jobId.length === 0) {
+      return { disposition: 'REJECTED', reason_code: 'CLEANUP_INPUT_INVALID', released: [] };
+    }
+    const released = [];
+    for (const [packageId, entry] of this.#retention) {
+      if (entry.job_id !== jobId || entry.released) continue;
+      entry.released = true;
+      this.#approvedPackages.delete(packageId);
+      this.#retention.delete(packageId);
+      released.push(packageId);
+    }
+    if (released.length > 0) {
+      this.#append({
+        traceId: this.#ids.nextTraceId(),
+        spanId: this.#ids.nextSpanId(),
+        parentSpanId: null,
+        eventName: 'memory.package.released',
+        outcome: 'success',
+        severity: 'info',
+        attributes: {
+          'pixel.memory.released_count': released.length,
+          'pixel.job.id': jobId,
+        },
+      });
+    }
+    return { disposition: 'RELEASED', reason_code: 'PACKAGES_RELEASED', released };
+  }
+
+  // Abandoned (non-terminal) retention is bounded by count. Oldest unreleased
+  // packages beyond the bound are released only when their job is absent from
+  // the store projection; a package whose job is still live is never evicted.
+  async boundRetention({ maximum = 64 } = {}) {
+    if (!Number.isSafeInteger(maximum) || maximum < 1) {
+      return { disposition: 'REJECTED', reason_code: 'CLEANUP_INPUT_INVALID', released: [] };
+    }
+    const unreleased = [...this.#retention.entries()].filter(([, entry]) => !entry.released);
+    if (unreleased.length <= maximum) {
+      return { disposition: 'BOUNDED', reason_code: 'WITHIN_BOUND', released: [] };
+    }
+    const released = [];
+    for (const [packageId, entry] of unreleased) {
+      if (this.#retention.size <= maximum) break;
+      let job = null;
+      try {
+        job = await this.#relayStore.getJob(entry.job_id);
+      } catch {
+        continue;
+      }
+      if (job) continue;
+      entry.released = true;
+      this.#approvedPackages.delete(packageId);
+      this.#retention.delete(packageId);
+      released.push(packageId);
+    }
+    if (released.length > 0) {
+      this.#append({
+        traceId: this.#ids.nextTraceId(),
+        spanId: this.#ids.nextSpanId(),
+        parentSpanId: null,
+        eventName: 'memory.package.released',
+        outcome: 'success',
+        severity: 'info',
+        attributes: { 'pixel.memory.released_count': released.length },
+      });
+    }
+    return { disposition: 'RELEASED', reason_code: 'ABANDONED_RELEASED', released };
+  }
+
+  retainedPackageCount() {
+    return this.#approvedPackages.size;
   }
 
   #append({ traceId, spanId, parentSpanId = null, eventName, outcome = 'success', severity = 'info', attributes = {} }) {
@@ -635,6 +720,7 @@ export class MemoryService {
       },
     });
     this.#approvedPackages.set(contextPackage.package_id, contextPackage);
+    this.retainPackage(contextPackage);
     return frozenCopy({ disposition: 'CREATED', package: contextPackage, trace_id: traceId });
   }
 }

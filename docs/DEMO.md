@@ -32,6 +32,10 @@ Mission Control currently exposes the lightweight **Company Pulse** surface with
 - **Infrastructure** — current simulated storage readiness, verified by Pixel;
 - **Protected apps** — current launch access, verified by Pixel.
 
+The OSS-006 candidate also adds the read-only **Mission Control Home** overview. It presents bounded company, storage, systems, AI compute, facilities, workforce, recent work, activity, needs-you, and incident sections from canonical seams. Explicit source modes and availability states are shown; the browser never becomes an authority or mutation surface.
+
+The Alpha service is unauthenticated. It defaults to `127.0.0.1`, and configuration can override the bind address. Do not expose it to an untrusted network or claim it is a production security boundary.
+
 The UI is a presentation layer over backend state and decisions; it does not create trust or authorization itself.
 
 ## 3. Run the degraded-storage path
@@ -85,6 +89,7 @@ The public suite includes contract, integration, security, UI, and evidence cove
 - model/runtime identity remains separate from Pixel agent identity;
 - callers and model text cannot supply prompts, routing, authority, or lifecycle state;
 - repeated reads do not rewrite canonical execution history.
+- Mission Control overview freshness uses exact decimal ordering, stale responses cannot overwrite fresher state, and oversized or malformed projections fail closed.
 
 ## 6. Safe experimentation
 

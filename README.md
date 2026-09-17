@@ -13,9 +13,9 @@
 
 # Pixel HQ
 
-**Pixel HQ is a secure operating layer for AI-assisted organizations.** The public Alpha proves that identity, device trust, jobs, Memory, model/tool execution, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
+**Pixel HQ is a secure operating layer for AI-assisted organizations.** This reviewed OSS-006 candidate proves that identity, device trust, jobs, Memory, model/tool execution, organizational state, scheduling, incidents, calendar/recurring work, Workforce/AgentOps, Mission Control Home, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
 
-This repository is a **public-safe Alpha architecture proof**. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
+This repository is a **public-safe Alpha architecture proof candidate**. Public `main` currently contains PX-001 through PX-005; this candidate adds reviewed PX-006 through PX-010 without publishing them. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
 
 ## Why Pixel HQ is different
 
@@ -24,10 +24,14 @@ This repository is a **public-safe Alpha architecture proof**. It does not claim
 - **Memory is data, not authority.** Remembered text can provide context but cannot grant permissions, widen scope, or mutate job/tool authority.
 - **Model invocation is bounded.** Relay owns the fixed operation and immutable invocation; Model Gateway routes only to deterministic Alpha simulators and cannot own lifecycle state.
 - **Tools are capability-gated.** Execution authority is checked at the Tool Gateway rather than inferred from agent intent.
+- **Scheduling is eligibility, not authority.** Scheduler decisions and reservations cannot grant permission or replace Relay lifecycle state.
+- **Incident truth has one owner.** Incident facts compose through Organizational State and are rechecked immediately before execution starts.
+- **Calendar owns planned operating facts.** Recurring work still enters Relay through deterministic, idempotent submission.
+- **Workforce identity is persistent.** Model, provider, harness, and session identity remain replaceable implementation details, and qualification does not mint authority.
 - **Simulation comes first.** Hardware-facing behavior is proven against replaceable simulator/live-shaped seams before production adapters exist.
 - **Evidence is part of the design.** Material state changes and security decisions are structured so they can be reviewed and reconstructed.
 
-## What works today
+## What the OSS-006 candidate proves
 
 | Slice | What it proves | Status |
 | --- | --- | --- |
@@ -35,6 +39,12 @@ This repository is a **public-safe Alpha architecture proof**. It does not claim
 | **PX-002 — Trust / access** | Identity + DeviceTrust → deterministic Access Gate; browser claims never become authority | ✅ Public Alpha |
 | **PX-003 — Job execution** | Atomic Relay lifecycle → Tool Gateway → deterministic worker → bounded result + causal evidence | ✅ Public Alpha |
 | **PX-004 — Memory / context** | Strict intake/record/package contracts → server-owned scope → post-adapter policy/relevance filtering → bounded context + Relay-linked evidence | ✅ Public Alpha |
+| **PX-005 — Model Gateway** | Relay-owned fixed `SYSTEM_STATUS_SUMMARY` invocation bound to an approved Memory package → exact read-only eligibility → deterministic `simulation`/`dev` simulator routing → bounded Gateway outcome + Relay-owned terminal evidence | ✅ Public Alpha |
+| **PX-006 — Organizational State + Scheduler** | Canonical coordination facts → fail-closed eligibility → lease-bounded capacity reservation → stage-two start confirmation | ✅ Public Alpha candidate |
+| **PX-007 — Incident + degraded state** | Canonical incident lifecycle → deterministic Company State mapping → incident-linked holds → stage-two safety recheck | ✅ Public Alpha candidate |
+| **PX-008 — Company Calendar + recurring work** | Half-open calendar/hours → immutable recurring definitions → deterministic Relay submission → bounded missed-run and overlap handling | ✅ Public Alpha candidate |
+| **PX-009 — Workforce + AgentOps** | Persistent employee lifecycle → per-capability qualification → causal attribution → bounded AgentOps projections → stage-two Workforce gate | ✅ Public Alpha candidate |
+| **PX-010 — Mission Control Home** | Read-only canonical overview → exact freshness ordering → bounded projections → explicit stale/unavailable/failed states → accessible owner surface | ✅ Public Alpha candidate |
 
 ## Try Pixel HQ in 60 seconds
 
@@ -69,7 +79,13 @@ flowchart LR
     A --> R[Pixel Relay]
     R --> M[Memory]
     R --> MG[Model Gateway]
+    R --> S[Scheduler]
     R --> T[Tool Gateway]
+    OS[Organizational State] --> S
+    IN[Incident] --> OS
+    CAL[Calendar] --> OS
+    WF[Workforce] --> OS
+    WF --> S
     T --> W[Deterministic Worker]
     MG --> FM[Fake Model A / B]
 
@@ -81,6 +97,11 @@ flowchart LR
 
     A --> E[Structured Evidence]
     R --> E
+    OS --> E
+    S --> E
+    IN --> E
+    CAL --> E
+    WF --> E
     M --> E
     MG --> E
     T --> E
@@ -93,7 +114,7 @@ Read [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`THREAT_MODEL.md`](THREAT_MODEL.m
 
 ## Security by construction
 
-The public Alpha includes explicit tests for fail-closed behavior, forged authority, revoked/untrusted devices, cross-department restricted data, Relay idempotency, malformed adapter output, bounded authority traversal, inert prompt injection, deterministic Memory filtering, bounded tool/Memory results, and evidence completeness.
+The public Alpha includes explicit tests for fail-closed behavior, forged authority, revoked/untrusted devices, cross-department restricted data, Relay idempotency, malformed adapter output, bounded authority traversal, inert prompt injection, deterministic Memory filtering, reservation races, stale revisions, incident/calendar/workforce seam failure, recurring submission replay, checkpoint and qualification expiry, Mission Control freshness and bounds, source-mode propagation, stage-two safety rechecks, bounded results, and evidence completeness.
 
 ## Project map
 
@@ -102,7 +123,7 @@ The public Alpha includes explicit tests for fail-closed behavior, forged author
 - `packages/adapter-sdk/` — replaceable runtime boundaries
 - `packages/registry/` — synthetic public composition fixture
 - `packages/telemetry/` — structured evidence and completeness checks
-- `services/` — device projection, Policy, Access Gate, Relay, Memory, Model Gateway, and Tool Gateway
+- `services/` — device projection, Policy, Access Gate, Relay, Memory, Model Gateway, Tool Gateway, Organizational State, Scheduler, Incident, Calendar, and Workforce
 - `apps/mission-control/` — lightweight presentation and local composition
 - `tests/` — contract, integration, security, UI, and evidence coverage
 - `docs/` — public architecture and demo documentation
@@ -118,6 +139,8 @@ Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SUPPORT.md`](SUPPORT.md). 
 ## Release history
 
 See [`CHANGELOG.md`](CHANGELOG.md). GitHub release tags remain maintainer-gated.
+
+This OSS-006 candidate contains PX-001 through PX-010, including the reviewed PX-005 hardening and public-safe PX-006 through PX-010. Public `main` currently contains PX-001 through PX-005. The latest tagged release (`v0.2.0-alpha`) predates PX-005; later public milestones arrive only through separate owner-gated public-sync revisions.
 
 ## License
 

@@ -4,6 +4,53 @@ All notable **public-safe** changes to Pixel HQ are recorded here. Architecture 
 
 ## Unreleased
 
+This OSS-006 candidate contains PX-001 through PX-010. Public `main` currently contains PX-001 through PX-005. The latest tagged release, `v0.2.0-alpha`, predates PX-005 and does **not** include it.
+
+### PX-010 — Mission Control Home integration
+
+- added a read-only Mission Control Home overview over canonical device, Relay, Organizational State, Incident, and Workforce seams;
+- added a strict `pixel.mission-control-overview.v1` contract with bounded sections, counters, lists, metadata, and a 64 KiB envelope limit;
+- added exact decimal freshness tokens, durable epoch state, and BigInt-based browser comparison so older responses cannot overwrite newer state;
+- added explicit source modes, stale/unavailable/denied/failed/unknown states, isolated section failures, and incident uncertainty handling;
+- added responsive, keyboard-navigable, and mobile-accessible presentation without UI-created authority;
+- added focused contract, integration, and UI tests for projection bounds, freshness, HTTP behavior, rendering, source modes, and security boundaries.
+
+### PX-009 — Workforce + AgentOps foundation
+
+- added persistent synthetic employee records with lifecycle, role/department history, optimistic revisions, and server-resolved identity;
+- added per-capability qualification, causal attribution, bounded evidence, and deterministic AgentOps projections;
+- composed Workforce facts with Organizational State and added fail-closed Scheduler stage-two checks;
+- kept qualification separate from authorization and model/provider/harness identity;
+- added focused contract, evidence, integration, and seam-failure tests.
+
+### PX-008 — Company calendar + recurring work foundation
+
+- added half-open calendar events, company hours, recurring templates, occurrences, and forward-only checkpoint contracts;
+- composed Calendar operating facts with Trusted Time, Organizational State, Incident, and Scheduler boundaries;
+- submitted recurring work through deterministic Relay idempotency without adding a second lifecycle engine;
+- added bounded missed-run, replay, overlap, and checkpoint behavior;
+- added focused contract, evidence, integration, mutation, and seam-failure tests.
+
+### PX-007 — Incident + degraded-state foundation
+
+- added canonical incident lifecycle, commander, phase, impact, recovery, closure, and bounded evidence contracts;
+- composed deterministic incident/environmental facts through Organizational State without adding a second authority source;
+- added incident-linked holds and fail-closed stage-two Scheduler safety rechecks;
+- added focused contract, evidence, integration, store, and seam-failure tests.
+
+### PX-006 — Organizational State + Scheduler foundation
+
+- added canonical coordination facts with Trusted Time expiry and optimistic revision protection;
+- added fail-closed Scheduler eligibility, atomic lease-bounded reservations, and stage-two start confirmation;
+- kept authorization in Access/Policy and canonical job lifecycle in Relay;
+- coupled approved Memory package cleanup to Relay terminal truth with in-flight protection;
+- added focused contract, evidence, integration, race, reservation, retention, and security tests.
+
+### PX-005 — reviewed hardening
+
+- included the complete reviewed post-publication hardening for model/runtime adapter boundaries, schemas, Policy, Model Gateway, Relay, telemetry, and focused tests;
+- retained deterministic simulator routing, bounded outcomes, and Relay-owned terminal state without fallback.
+
 ### PX-005 — Pixel Model Gateway
 
 - added five strict Pixel-owned model invocation/routing/provider/outcome contracts and schemas;
@@ -44,5 +91,5 @@ All notable **public-safe** changes to Pixel HQ are recorded here. Architecture 
 ### Known Alpha limits
 
 - process-local state resets on restart;
-- no production PKI, secret vault, durable queue/database, scheduler, real hardware adapter, recovery system, production-grade Memory store, or continuously running LLM workforce;
+- no production PKI, secret vault, durable queue/database, real hardware adapter, recovery system, production-grade Memory store, or continuously running LLM workforce;
 - no production network exposure is implied by the local simulator.
