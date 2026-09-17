@@ -247,3 +247,23 @@ test('Relay requires both scheduler and requirement provider when either is pres
     requirementProvider: new SimulatorExecutionRequirementProvider(),
   }), /Scheduler/);
 });
+
+test('Relay requires scheduler.release alongside the other scheduler methods', () => {
+  const ids = createIds(40_000);
+  const base = {
+    environment: 'simulation',
+    contextProvider: new SimulatorJobContextProvider(),
+    store: new SimulatorRelayStoreAdapter(),
+    toolGateway: { source: 'simulator', async execute() {} },
+    evidence: new EvidenceRecorder({ clock: () => NOW }),
+    ids,
+    clock: () => NOW,
+  };
+  // A scheduler that cannot release would leak reservations through the
+  // best-effort cleanup path, so it is rejected at dependency construction.
+  assert.throws(() => new RelayService({
+    ...base,
+    scheduler: { evaluate() {}, confirmExecutionStart() {}, reserve() {} },
+    requirementProvider: new SimulatorExecutionRequirementProvider(),
+  }), /release|requires a Scheduler/);
+});
