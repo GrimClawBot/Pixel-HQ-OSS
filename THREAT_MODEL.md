@@ -2,7 +2,7 @@
 
 Status: **Alpha / public-safe**
 
-This threat model describes the trust boundaries demonstrated by the current public-safe Alpha candidate. It is intentionally narrower than a production security model because this repository is a simulator-first architecture proof. Public `main` currently contains PX-001 through PX-005; the candidate adds reviewed PX-006 through PX-010 and does not publish PX-011+.
+This threat model describes the trust boundaries demonstrated by the current public-safe Alpha. It is intentionally narrower than a production security model because this repository is a simulator-first architecture proof. The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha.
 
 ## Security objective
 

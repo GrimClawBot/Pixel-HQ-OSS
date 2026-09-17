@@ -6,9 +6,9 @@ This document is a **public-safe architectural overview** of the reviewed Alpha 
 
 Pixel HQ separates organizational authority from the model, UI, hardware vendor, and workflow harness. Higher layers consume Pixel-owned contracts and deterministic decisions; adapters remain replaceable.
 
-## Reviewed OSS-006 candidate
+## Current public Alpha
 
-Public `main` currently contains PX-001 through PX-005. This candidate adds reviewed PX-006 through PX-010 and does not publish PX-011+.
+The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha.
 
 ```mermaid
 flowchart TB
@@ -130,13 +130,13 @@ PX-006 adds canonical approvals, delegations, holds, duty, capacity, and derived
 
 PX-007 gives Incident ownership of canonical incident truth, one commander, lifecycle, phase, impact, recovery, and bounded evidence. Incident facts compose through Organizational State; incident-linked holds reuse existing classes; Scheduler rechecks incident safety at stage two. Resolving one incident cannot clear another incident or hold.
 
-### Calendar (OSS-006 candidate)
+### Calendar
 
-PX-008, as candidate material in this OSS-006 export, owns planned calendar and recurring-work truth. Trusted Time provides authoritative time semantics, Organizational State composes operating facts, and Scheduler reacts to timing and eligibility conditions. Recurring occurrences use deterministic Relay idempotency and revision-guarded checkpoints; Calendar does not create a second job lifecycle engine.
+PX-008 owns planned calendar and recurring-work truth. Trusted Time provides authoritative time semantics, Organizational State composes operating facts, and Scheduler reacts to timing and eligibility conditions. Recurring occurrences use deterministic Relay idempotency and revision-guarded checkpoints; Calendar does not create a second job lifecycle engine.
 
-### Workforce and AgentOps (OSS-006 candidate)
+### Workforce and AgentOps
 
-PX-009, as candidate material in this OSS-006 export, owns persistent synthetic Pixel employee records, per-capability qualifications, causal attribution, bounded evidence, and AgentOps projections. Workforce facts compose through Organizational State and are rechecked by Scheduler immediately before `RUNNING`. Qualification is an eligibility fact, never an authorization grant; Access and Policy retain authority.
+PX-009 owns persistent synthetic Pixel employee records, per-capability qualifications, causal attribution, bounded evidence, and AgentOps projections. Workforce facts compose through Organizational State and are rechecked by Scheduler immediately before `RUNNING`. Qualification is an eligibility fact, never an authorization grant; Access and Policy retain authority.
 
 ### Adapters
 

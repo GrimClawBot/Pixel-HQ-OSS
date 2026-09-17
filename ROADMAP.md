@@ -2,9 +2,9 @@
 
 This roadmap is **directional**. It communicates project intent to contributors and evaluators, but it does not authorize implementation by itself. Security, architecture, and release gates still apply.
 
-## Reviewed public Alpha candidate
+## Current public Alpha
 
-Public `main` currently contains PX-001 through PX-005. The sections marked **candidate** below are part of the reviewed OSS-006 export candidate and are not yet public.
+The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening.
 
 ### PX-001 — Device state ✅
 
@@ -65,7 +65,7 @@ Public `main` currently contains PX-001 through PX-005. The sections marked **ca
 - stage-two incident safety rechecks before Relay enters `RUNNING`;
 - bounded incident evidence and fail-closed seam behavior.
 
-### PX-008 — Company calendar + recurring work ✅ candidate
+### PX-008 — Company calendar + recurring work ✅
 
 - half-open company calendar events and local weekly operating windows;
 - deterministic holidays, maintenance, and incident-precedence composition;
@@ -73,7 +73,7 @@ Public `main` currently contains PX-001 through PX-005. The sections marked **ca
 - canonical Relay submission with no hidden execution or second lifecycle engine;
 - bounded missed-run, replay, overlap, and checkpoint handling.
 
-### PX-009 — Workforce + AgentOps ✅ candidate
+### PX-009 — Workforce + AgentOps ✅
 
 - persistent synthetic Pixel employee identity independent of model, provider, harness, or session;
 - lifecycle and role/department history with optimistic revision protection;
@@ -81,7 +81,7 @@ Public `main` currently contains PX-001 through PX-005. The sections marked **ca
 - causal attribution and bounded evidence over canonical Workforce records;
 - deterministic AgentOps projections and stage-two Workforce eligibility rechecks.
 
-### PX-010 — Mission Control Home ✅ candidate
+### PX-010 — Mission Control Home ✅
 
 - read-only Company Pulse overview over canonical device, Relay, Organizational State, Incident, and Workforce seams;
 - exact decimal freshness ordering with browser-side BigInt comparison;
@@ -98,7 +98,7 @@ The next implementation milestone should remain separately authorized and simula
 - production Workforce identity integration;
 - stronger release/recovery evidence and additional simulator-backed infrastructure domains.
 
-**PX-011 and later milestones are not part of this public candidate.** They remain private and reach this repository only through separate, owner-gated public-sync revisions that pass the same default-deny export, review, and validation gates.
+**PX-011 and later milestones are not public and are not implemented in this public Alpha.** They remain private and reach this repository only through separate, owner-gated public-sync revisions that pass the same default-deny export, review, and validation gates.
 
 ## Pixel Office direction
 

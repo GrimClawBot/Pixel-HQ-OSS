@@ -4,7 +4,7 @@ All notable **public-safe** changes to Pixel HQ are recorded here. Architecture 
 
 ## Unreleased
 
-This OSS-006 candidate contains PX-001 through PX-010. Public `main` currently contains PX-001 through PX-005. The latest tagged release, `v0.2.0-alpha`, predates PX-005 and does **not** include it.
+The public Alpha now contains PX-001 through PX-010, including the reviewed PX-005 hardening. The latest tagged release, `v0.2.0-alpha`, still predates PX-005 and does **not** include it; a new tag or release remains a separate maintainer-gated decision.
 
 ### PX-010 — Mission Control Home integration
 

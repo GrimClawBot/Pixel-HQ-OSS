@@ -72,9 +72,9 @@ Mission Control Home is presentation-only. The server normalizes a strict `pixel
 
 Recent Work is a bounded read-only Relay projection. Workforce Home data is aggregate-only. Mission Control creates no identity, policy, lifecycle, scheduler, incident, calendar, workforce, memory, model, tool, or evidence authority.
 
-## Beyond the current candidate
+## Beyond the current public Alpha
 
-PX-010 is the newest slice in this candidate. Public `main` currently contains PX-001 through PX-005. PX-011 and later private milestones are withheld until separate owner-gated public-sync revisions export and review them; nothing in this document authorizes or previews unpublished behavior.
+PX-010 is the newest slice in the current public Alpha (PX-001 through PX-010). PX-011 and later milestones are not public and are not implemented in this public Alpha; they are withheld until separate owner-gated public-sync revisions export and review them. Nothing in this document authorizes or previews unpublished behavior.
 
 ## Replacement boundaries
 

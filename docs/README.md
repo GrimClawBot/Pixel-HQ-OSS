@@ -23,4 +23,4 @@ Start with the root [`README.md`](../README.md) for the 60-second demo, current 
 
 Internal authority originals, private roadmaps, operational evidence, infrastructure details, and privileged security procedures are intentionally not part of the public source export.
 
-This OSS-006 candidate covers PX-001 through PX-010. Public `main` currently contains PX-001 through PX-005, and PX-011+ remains private until separately owner-gated public-sync revisions publish it.
+The current public Alpha covers PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha; it reaches this repository only through separate, owner-gated public-sync revisions.

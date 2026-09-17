@@ -13,9 +13,9 @@
 
 # Pixel HQ
 
-**Pixel HQ is a secure operating layer for AI-assisted organizations.** This reviewed OSS-006 candidate proves that identity, device trust, jobs, Memory, model/tool execution, organizational state, scheduling, incidents, calendar/recurring work, Workforce/AgentOps, Mission Control Home, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
+**Pixel HQ is a secure operating layer for AI-assisted organizations.** The current public Alpha proves that identity, device trust, jobs, Memory, model/tool execution, organizational state, scheduling, incidents, calendar/recurring work, Workforce/AgentOps, Mission Control Home, policy, and evidence can stay under deterministic Pixel-owned contracts instead of being implicitly controlled by a model, client, hardware vendor, or workflow framework.
 
-This repository is a **public-safe Alpha architecture proof candidate**. Public `main` currently contains PX-001 through PX-005; this candidate adds reviewed PX-006 through PX-010 without publishing them. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
+This repository is a **public-safe Alpha architecture proof**. The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha. It does not claim production authentication, PKI, durable infrastructure control, recovery, or continuously running autonomous agents.
 
 ## Why Pixel HQ is different
 
@@ -31,7 +31,7 @@ This repository is a **public-safe Alpha architecture proof candidate**. Public 
 - **Simulation comes first.** Hardware-facing behavior is proven against replaceable simulator/live-shaped seams before production adapters exist.
 - **Evidence is part of the design.** Material state changes and security decisions are structured so they can be reviewed and reconstructed.
 
-## What the OSS-006 candidate proves
+## What the public Alpha proves
 
 | Slice | What it proves | Status |
 | --- | --- | --- |
@@ -40,11 +40,11 @@ This repository is a **public-safe Alpha architecture proof candidate**. Public 
 | **PX-003 — Job execution** | Atomic Relay lifecycle → Tool Gateway → deterministic worker → bounded result + causal evidence | ✅ Public Alpha |
 | **PX-004 — Memory / context** | Strict intake/record/package contracts → server-owned scope → post-adapter policy/relevance filtering → bounded context + Relay-linked evidence | ✅ Public Alpha |
 | **PX-005 — Model Gateway** | Relay-owned fixed `SYSTEM_STATUS_SUMMARY` invocation bound to an approved Memory package → exact read-only eligibility → deterministic `simulation`/`dev` simulator routing → bounded Gateway outcome + Relay-owned terminal evidence | ✅ Public Alpha |
-| **PX-006 — Organizational State + Scheduler** | Canonical coordination facts → fail-closed eligibility → lease-bounded capacity reservation → stage-two start confirmation | ✅ Public Alpha candidate |
-| **PX-007 — Incident + degraded state** | Canonical incident lifecycle → deterministic Company State mapping → incident-linked holds → stage-two safety recheck | ✅ Public Alpha candidate |
-| **PX-008 — Company Calendar + recurring work** | Half-open calendar/hours → immutable recurring definitions → deterministic Relay submission → bounded missed-run and overlap handling | ✅ Public Alpha candidate |
-| **PX-009 — Workforce + AgentOps** | Persistent employee lifecycle → per-capability qualification → causal attribution → bounded AgentOps projections → stage-two Workforce gate | ✅ Public Alpha candidate |
-| **PX-010 — Mission Control Home** | Read-only canonical overview → exact freshness ordering → bounded projections → explicit stale/unavailable/failed states → accessible owner surface | ✅ Public Alpha candidate |
+| **PX-006 — Organizational State + Scheduler** | Canonical coordination facts → fail-closed eligibility → lease-bounded capacity reservation → stage-two start confirmation | ✅ Public Alpha |
+| **PX-007 — Incident + degraded state** | Canonical incident lifecycle → deterministic Company State mapping → incident-linked holds → stage-two safety recheck | ✅ Public Alpha |
+| **PX-008 — Company Calendar + recurring work** | Half-open calendar/hours → immutable recurring definitions → deterministic Relay submission → bounded missed-run and overlap handling | ✅ Public Alpha |
+| **PX-009 — Workforce + AgentOps** | Persistent employee lifecycle → per-capability qualification → causal attribution → bounded AgentOps projections → stage-two Workforce gate | ✅ Public Alpha |
+| **PX-010 — Mission Control Home** | Read-only canonical overview → exact freshness ordering → bounded projections → explicit stale/unavailable/failed states → accessible owner surface | ✅ Public Alpha |
 
 ## Try Pixel HQ in 60 seconds
 
@@ -140,7 +140,7 @@ Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SUPPORT.md`](SUPPORT.md). 
 
 See [`CHANGELOG.md`](CHANGELOG.md). GitHub release tags remain maintainer-gated.
 
-This OSS-006 candidate contains PX-001 through PX-010, including the reviewed PX-005 hardening and public-safe PX-006 through PX-010. Public `main` currently contains PX-001 through PX-005. The latest tagged release (`v0.2.0-alpha`) predates PX-005; later public milestones arrive only through separate owner-gated public-sync revisions.
+The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening. The latest tagged release (`v0.2.0-alpha`) still predates PX-005, so no tagged release includes the PX-005 hardening or PX-006 through PX-010; a new tag or release remains a separate maintainer-gated decision. PX-011+ is not public and is not implemented in this public Alpha.
 
 ## License
 
