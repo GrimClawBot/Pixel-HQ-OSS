@@ -20,8 +20,9 @@ test('PX010 missing/failed/stale sources and WATCH/REVIEW remain explicit', () =
   for (const name of ['ai_compute','facilities','recent_work']) {
     assert.match(viewModule.renderSection(name, unavailable), /NOT YET CONNECTED/);
   }
-  const workforce = viewModule.renderSection('workforce', { ...ready({ total: 2, active: 2, quarantined: 0, watch: 1, review: 1 }), availability: 'STALE' });
-  assert.match(workforce, /STALE/); assert.match(workforce, /Observations/); assert.doesNotMatch(workforce, /revoked|access denied/i);
+  const workforce = viewModule.renderSection('workforce', { ...ready({ total: 2, active: 1, restricted: 1, watch: 1, review: 1 }), availability: 'STALE' });
+  assert.match(workforce, /STALE/); assert.match(workforce, /Observations/); assert.match(workforce, /Restricted/);
+  assert.doesNotMatch(workforce, /Quarantined/); assert.doesNotMatch(workforce, /revoked|access denied/i);
   assert.doesNotMatch(viewModule.renderSection('company', ready({ state: 'NORMAL', summary: '<script>secret()</script>', refs: [] })), /<script>/);
 });
 test('PX010 browser rejects equal/older projections and keeps selected hero through incidents', () => {
@@ -43,4 +44,21 @@ test('PX010 refresh failure retains explicit stale data and rejects whole-envelo
   state.accept(value); state.markStale();
   assert.equal(state.value.sections.company.availability, 'STALE');
   assert.equal(state.accept({ contract: 'pixel.mission-control-overview.v1', availability: 'FAILED', reason_code: 'FRESHNESS_STATE_UNAVAILABLE' }), false);
+});
+test('PX010 browser rejects calendar-invalid timestamps that Date.parse normalizes', () => {
+  assert.equal(typeof controlModule.OverviewState, 'function');
+  const state = new controlModule.OverviewState();
+  assert.equal(state.accept(overview('1')), true);
+  // February 30 normalizes to March 2 under Date.parse; canonical round-trip
+  // equality rejects it so freshness is never computed from a shifted instant.
+  assert.equal(new Date('2026-02-30T12:00:00.000Z').toISOString(), '2026-03-02T12:00:00.000Z');
+  assert.equal(state.accept({ ...overview('2'), observed_at: '2026-02-30T12:00:00.000Z' }), false);
+});
+test('PX010 AI Compute has its own empty-state message', () => {
+  assert.equal(typeof viewModule.renderSection, 'function');
+  const empty = viewModule.renderSection('ai_compute', ready({ items: [] }));
+  assert.match(empty, /No AI Compute records\./);
+  assert.doesNotMatch(empty, /No recorded activity\./);
+  const fallback = viewModule.renderSection('recent_activity', ready({ items: [] }));
+  assert.match(fallback, /No recorded activity\./);
 });

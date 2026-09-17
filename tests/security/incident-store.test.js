@@ -79,6 +79,18 @@ test('conflicting operation-ID reuse rejects', () => {
   assert.equal(incident.getIncident('incident-001').severity, 'SEV-1');
 });
 
+test('empty operation IDs reject as OPERATION_INVALID before any state read', () => {
+  const store = new SimulatorIncidentStoreAdapter();
+  const { incident } = serviceWithStore(store);
+  assert.equal(incident.createIncident(createInput()).disposition, 'RECORDED');
+  const record = incident.getIncident('incident-001');
+  const empty = store.put('incident', record, { expectedRevision: record.revision, operationId: '' });
+  assert.equal(empty.disposition, 'REJECTED');
+  assert.equal(empty.reason_code, 'OPERATION_INVALID');
+  assert.equal(store.readOperation(''), null);
+  assert.equal(incident.getIncident('incident-001').revision, record.revision);
+});
+
 test('duplicate incident IDs reject except exact idempotent replay', () => {
   const { incident } = serviceWithStore(new SimulatorIncidentStoreAdapter());
   incident.createIncident(createInput());
@@ -163,13 +175,33 @@ test('ambiguous write with revision drift fails closed', () => {
 
 test('read-back reconcile uses the committed operation even when revision moved', () => {
   const inner = new SimulatorIncidentStoreAdapter();
-  const store = new AmbiguousStoreWrapper(inner, { ambiguousCount: 1 });
+  // A second actor advances the committed incident between the ambiguous
+  // write and the read-back, so the revision genuinely moves before the
+  // service reconciles the ambiguous outcome.
+  const store = new class extends AmbiguousStoreWrapper {
+    readOperation(operationId) {
+      if (!this.drifted) {
+        this.drifted = true;
+        const other = serviceWithStore(this.inner);
+        other.incident.advancePhase({
+          incident_id: 'incident-001', operation_id: 'op-drift-advance',
+          expected_revision: 1, phase: 'CONTAIN',
+        });
+      }
+      return super.readOperation(operationId);
+    }
+  }(inner, { ambiguousCount: 1 });
   const { incident } = serviceWithStore(store);
   const result = incident.createIncident(createInput());
   assert.equal(result.disposition, 'RECORDED');
-  assert.equal(store.putCalls, 1);
-  // The committed operation is authoritative even though a later actor could
-  // have mutated after the read-back; exact committed op returns its result.
+  assert.equal(store.putCalls, 1, 'a drifted but committed operation is never retried');
+  // The committed operation's record is authoritative and immutable: the
+  // read-back reconciles to exactly the create record even though the current
+  // incident revision has moved on, and the drift itself is preserved.
+  assert.equal(result.record.revision, 1);
+  assert.equal(result.record.response_phase, 'DECLARE');
+  assert.equal(incident.getIncident('incident-001').revision, 2, 'the second actor\u2019s advance really moved the revision');
+  assert.equal(incident.getIncident('incident-001').response_phase, 'CONTAIN');
 });
 
 test('store refuses conflicting operation and non-cloneable boundary values', () => {

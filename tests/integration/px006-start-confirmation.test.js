@@ -235,7 +235,7 @@ test('Relay requires both scheduler and requirement provider when either is pres
   };
   assert.throws(() => new RelayService({
     ...base,
-    scheduler: { evaluate() {}, confirmExecutionStart() {}, reserve() {} },
+    scheduler: { evaluate() {}, confirmExecutionStart() {}, reserve() {}, release() {} },
   }), /requirement provider/);
   assert.throws(() => new RelayService({
     ...base,
@@ -243,7 +243,7 @@ test('Relay requires both scheduler and requirement provider when either is pres
   }), /requires a Scheduler/);
   assert.throws(() => new RelayService({
     ...base,
-    scheduler: { evaluate() {} },
+    scheduler: { evaluate() {}, release() {} },
     requirementProvider: new SimulatorExecutionRequirementProvider(),
   }), /Scheduler/);
 });

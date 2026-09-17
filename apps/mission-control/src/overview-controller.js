@@ -10,6 +10,7 @@ export class OverviewState {
       || !isNewerToken(view.freshness_token, this.value?.freshness_token ?? null)
       || ![true,false,null].includes(view.incident_override)
       || typeof view.observed_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(view.observed_at) || !Number.isFinite(Date.parse(view.observed_at))
+      || new Date(view.observed_at).toISOString() !== view.observed_at
       || !view.sections || Object.keys(view.sections).length !== SECTIONS.length
       || new TextEncoder().encode(JSON.stringify(view)).length > MAX_BYTES) return false;
     const sections = {};

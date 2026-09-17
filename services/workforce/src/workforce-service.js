@@ -382,11 +382,14 @@ export class WorkforceService {
       if (latestByAgent.has(evaluation.agent_id)) throw new RangeError('PROJECTION_BOUND_EXCEEDED');
       latestByAgent.set(evaluation.agent_id, evaluation);
     }
-    const result = { total: records.length, active: 0, quarantined: 0, watch: 0, review: 0 };
+    // Canonical aggregate/public-safe summary. There is no QUARANTINED
+    // lifecycle status; LIMITED and RETRAINING are the canonical statuses that
+    // restrict ordinary autonomous capacity, counted here as `restricted`.
+    const result = { total: records.length, active: 0, restricted: 0, watch: 0, review: 0 };
     for (const record of records) {
       assertValidWorkforceRecordV1(record);
       if (record.lifecycle_status === 'ACTIVE') result.active += 1;
-      if (record.lifecycle_status === 'QUARANTINED') result.quarantined += 1;
+      if (record.lifecycle_status === 'LIMITED' || record.lifecycle_status === 'RETRAINING') result.restricted += 1;
       const evaluation = latestByAgent.get(record.agent_id) ?? null;
       if (evaluation !== null) {
         if (evaluation.evaluation_state === 'WATCH') result.watch += 1;

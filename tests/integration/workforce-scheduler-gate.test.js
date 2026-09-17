@@ -26,16 +26,19 @@ function activeRuntime() {
   return r;
 }
 
-test('existing agent_id remains the identity across a runtime/model replacement', () => {
+test('existing agent_id remains the identity across a runtime/model replacement', async () => {
   const r = activeRuntime();
-  const firstJob = canonicalJob({ workerId: AGENT_ID });
-  const secondJob = canonicalJob({ jobId: 'job-002', workerId: AGENT_ID });
   const before = r.workforce.getRecord(AGENT_ID);
-  // Two different Relay jobs (different models/runtimes would only change the
-  // model envelope, which Workforce never reads) share one persistent identity.
-  assert.equal(firstJob.envelope.execution.worker_binding.worker_id, secondJob.envelope.execution.worker_binding.worker_id);
-  assert.equal(r.workforce.getRecord(AGENT_ID).agent_id, before.agent_id);
-  assert.equal(r.workforce.getRecord(AGENT_ID).revision, before.revision);
+  // Two distinct real evaluations over separate runtime executions: Workforce
+  // observes both jobs yet never mints a new identity or revision from
+  // runtime/model activity, which only changes the model envelope it ignores.
+  const first = await evaluateOrdinary(r, { job: canonicalJob({ workerId: AGENT_ID }) });
+  const second = await evaluateOrdinary(r, { job: canonicalJob({ jobId: 'job-002', workerId: AGENT_ID }) });
+  assert.equal(first.result.disposition, 'ELIGIBLE');
+  assert.equal(second.result.disposition, 'ELIGIBLE');
+  const after = r.workforce.getRecord(AGENT_ID);
+  assert.equal(after.agent_id, before.agent_id);
+  assert.equal(after.revision, before.revision);
 });
 
 test('ACTIVE + QUALIFIED passes the Workforce gate when every other gate allows', async () => {

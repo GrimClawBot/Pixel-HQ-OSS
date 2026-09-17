@@ -514,7 +514,7 @@ export class SchedulerService {
           'pixel.scheduler.resource_ref': validation.resource_ref,
         },
       });
-      return frozenCopy({ disposition: 'WAIT', reservation: stored.reservation, evaluation });
+      return frozenCopy({ disposition: 'WAIT', reservation: stored.reservation, evaluation: echo });
     }
     issued.consumed = true;
     this.#append({

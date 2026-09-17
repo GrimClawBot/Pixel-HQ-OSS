@@ -103,7 +103,8 @@ function requireDependencies({ environment, contextProvider, store, toolGateway,
     throw new TypeError('Relay model execution requires both Memory and Model Gateway');
   }
   if (scheduler !== undefined && (typeof scheduler.evaluate !== 'function'
-    || typeof scheduler.confirmExecutionStart !== 'function' || typeof scheduler.reserve !== 'function')) {
+    || typeof scheduler.confirmExecutionStart !== 'function' || typeof scheduler.reserve !== 'function'
+    || typeof scheduler.release !== 'function')) {
     throw new TypeError('Relay start confirmation requires a Scheduler');
   }
   if (scheduler !== undefined && (!requirementProvider
@@ -258,7 +259,7 @@ export class RelayService {
     const fresh = await this.#store.getJob(job.envelope.job_id);
     if (!fresh || fresh.current_state !== 'ACCEPTED') {
       this.#releaseReservation(admission.reservation);
-      if (onReject) onReject();
+      if (onReject) await onReject();
       return { confirmed: false, reason_code: 'START_REJECTED_JOB_STATE', decision_class: 'DENY' };
     }
     let confirmation;
@@ -273,12 +274,12 @@ export class RelayService {
       // A scheduler dependency failure rejects start (the job stays ACCEPTED)
       // and must not leak the tracked reservation or the context claim.
       this.#releaseReservation(admission.reservation);
-      if (onReject) onReject();
+      if (onReject) await onReject();
       return { confirmed: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT' };
     }
     if (!confirmation.confirmed) {
       this.#releaseReservation(admission.reservation);
-      if (onReject) onReject();
+      if (onReject) await onReject();
       return {
         confirmed: false,
         reason_code: confirmation.reason_code,
@@ -308,10 +309,13 @@ export class RelayService {
   // A non-terminal model attempt that cannot continue must not leave state
   // behind: the consumed context claim is released (when the job is still
   // ACCEPTED), the approved package is released with it, and the tracked
-  // reservation is always released so capacity is never leaked.
-  #releaseModelAttempt(jobId) {
+  // reservation is always released so capacity is never leaked. The adapter
+  // contract permits a Promise from releaseModelContextPreparation, so the
+  // release is awaited: the disposition is observed and a rejected promise is
+  // contained by the best-effort catch instead of escaping cleanup.
+  async #releaseModelAttempt(jobId) {
     try {
-      const released = this.#store.releaseModelContextPreparation(jobId);
+      const released = await this.#store.releaseModelContextPreparation(jobId);
       if (released?.disposition === 'RELEASED') this.#releaseApprovedPackages(jobId);
     } catch {
       // Best effort: a failed claim release leaves the claim as-is.
@@ -839,7 +843,7 @@ export class RelayService {
     const applied = await this.#store.applyTransition(jobId, running);
     if (applied.disposition !== 'APPLIED') {
       if (applied.job) this.#recordTransitionRejection(applied.job, 'RUNNING', 'EXECUTION_STARTED');
-      this.#releaseModelAttempt(jobId);
+      await this.#releaseModelAttempt(jobId);
       return frozenCopy({ disposition: 'INVALID_STATE', job: applied.job, model_output: null, trace_id: job.envelope.trace_id });
     }
     this.#append({

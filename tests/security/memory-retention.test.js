@@ -13,10 +13,10 @@ import { MemoryService } from '../../services/memory/src/memory-service.js';
 import { RelayService } from '../../services/relay/src/relay-service.js';
 import { createIds, NOW } from '../helpers/px006-runtime.js';
 
-function runtime({ failTerminalCommit = false } = {}) {
+function runtime({ failTerminalCommit = false, store: storeOverride = null } = {}) {
   const ids = createIds(20_000);
   const evidence = new EvidenceRecorder({ clock: () => NOW });
-  const store = new SimulatorRelayStoreAdapter({ failTerminalCommit });
+  const store = storeOverride ?? new SimulatorRelayStoreAdapter({ failTerminalCommit });
   const memory = new MemoryService({
     environment: 'simulation',
     intakeContextProvider: new SimulatorMemoryIntakeContextProvider(),
@@ -147,23 +147,47 @@ test('cleanup failure never corrupts the committed terminal result', async () =>
   assert.equal(response.job.current_state, 'COMPLETED');
 });
 
-test('an abandoned package is released only when its job is no longer resolvable', async () => {
+test('over-bound retention defers while every package backs a live job', async () => {
   const subject = runtime();
-  const accepted = await subject.prepare();
-  const jobId = accepted.job.envelope.job_id;
-  // Build a package without executing the job (abandoned).
-  const claim = subject.store.claimModelContextPreparation(jobId);
-  assert.equal(claim.disposition, 'PREPARE_NOW');
-  const context = await subject.memory.buildContext({ job_id: jobId, query: 'system status' });
-  assert.equal(context.disposition, 'CREATED');
-  assert.equal(subject.memory.retainedPackageCount(), 1);
+  const first = await subject.prepare();
+  const second = await subject.prepare('Another status note.');
+  for (const accepted of [first, second]) {
+    const jobId = accepted.job.envelope.job_id;
+    const claim = subject.store.claimModelContextPreparation(jobId);
+    assert.equal(claim.disposition, 'PREPARE_NOW');
+    const context = await subject.memory.buildContext({ job_id: jobId, query: 'system status' });
+    assert.equal(context.disposition, 'CREATED');
+  }
+  assert.equal(subject.memory.retainedPackageCount(), 2);
 
-  // While the job is live, bounded retention must not evict it even at the
-  // tightest valid bound.
+  // Two retained packages with resolvable live jobs genuinely exceed the
+  // tightest valid bound, so the liveness-check path runs: live packages are
+  // never evicted and the still-over-bound outcome is reported truthfully.
   const boundedLive = await subject.memory.boundRetention({ maximum: 1 });
-  assert.equal(subject.memory.retainedPackageCount(), 1, 'a live job package is never evicted by the bound');
+  assert.equal(boundedLive.disposition, 'DEFERRED');
+  assert.equal(boundedLive.reason_code, 'OVER_BOUND_RETENTION_DEFERRED');
   assert.deepEqual(boundedLive.released, []);
-  assert.equal(boundedLive.disposition, 'BOUNDED');
+  assert.equal(subject.memory.retainedPackageCount(), 2, 'a live job package is never evicted by the bound');
+});
+
+test('over-bound retention defers when the Relay store cannot resolve jobs', async () => {
+  const subject = runtime();
+  const first = await subject.prepare();
+  const second = await subject.prepare('Another status note.');
+  for (const accepted of [first, second]) {
+    subject.store.claimModelContextPreparation(accepted.job.envelope.job_id);
+    await subject.memory.buildContext({ job_id: accepted.job.envelope.job_id, query: 'system status' });
+  }
+  assert.equal(subject.memory.retainedPackageCount(), 2);
+  const originalGetJob = subject.store.getJob.bind(subject.store);
+  subject.store.getJob = () => { throw new Error('store unavailable'); };
+  // A getJob failure must not evict anything or disguise the over-bound state.
+  const deferred = await subject.memory.boundRetention({ maximum: 1 });
+  assert.equal(deferred.disposition, 'DEFERRED');
+  assert.equal(deferred.reason_code, 'OVER_BOUND_RETENTION_DEFERRED');
+  assert.deepEqual(deferred.released, []);
+  assert.equal(subject.memory.retainedPackageCount(), 2, 'an unreachable store must not evict packages');
+  subject.store.getJob = originalGetJob;
 });
 
 test('bounded retention releases abandoned packages once their job is gone', async () => {
@@ -183,6 +207,8 @@ test('bounded retention releases abandoned packages once their job is gone', asy
   const originalGetJob = subject.store.getJob.bind(subject.store);
   subject.store.getJob = () => null;
   const bounded = await subject.memory.boundRetention({ maximum: 1 });
+  assert.equal(bounded.disposition, 'RELEASED');
+  assert.equal(bounded.reason_code, 'ABANDONED_RELEASED');
   assert.equal(bounded.released.length, 1);
   assert.equal(subject.memory.retainedPackageCount(), 1);
   subject.store.getJob = originalGetJob;
@@ -195,4 +221,56 @@ test('cleanup evidence is bounded and never contains package text', async () => 
   const serialized = JSON.stringify(subject.evidence.all());
   assert.equal(serialized.includes('Quarterly revenue'), false, 'cleanup evidence must not leak Memory text');
   assert.equal(serialized.includes('package text'), false);
+});
+
+test('an asynchronous store release is awaited on the non-terminal exit path', async () => {
+  // The adapter SDK requires only that releaseModelContextPreparation is a
+  // function, so a live adapter may return a Promise. The RUNNING transition
+  // is forced to fail so the non-terminal cleanup path runs; the async
+  // disposition must still be observed and release the approved package.
+  const store = new class extends SimulatorRelayStoreAdapter {
+    async releaseModelContextPreparation(jobId, options) {
+      return super.releaseModelContextPreparation(jobId, options);
+    }
+
+    async applyTransition(jobId, transition) {
+      // The RUNNING transition is refused without applying, so the job stays
+      // ACCEPTED exactly as on a real rejected transition.
+      if (transition.to_state === 'RUNNING') {
+        return { disposition: 'REJECTED', job: await this.getJob(jobId) };
+      }
+      return super.applyTransition(jobId, transition);
+    }
+  }();
+  const subject = runtime({ store });
+  const accepted = await subject.prepare();
+  const jobId = accepted.job.envelope.job_id;
+  const response = await subject.relay.executeModelSummary(jobId);
+  assert.equal(response.disposition, 'INVALID_STATE');
+  assert.equal(subject.memory.retainedPackageCount(), 0, 'an async RELEASED disposition must release the approved package');
+});
+
+test('a rejected asynchronous release is contained by the best-effort cleanup path', async () => {
+  const store = new class extends SimulatorRelayStoreAdapter {
+    releaseModelContextPreparation() {
+      return Promise.reject(new Error('async release exploded'));
+    }
+
+    async applyTransition(jobId, transition) {
+      // The RUNNING transition is refused without applying, so the job stays
+      // ACCEPTED exactly as on a real rejected transition.
+      if (transition.to_state === 'RUNNING') {
+        return { disposition: 'REJECTED', job: await this.getJob(jobId) };
+      }
+      return super.applyTransition(jobId, transition);
+    }
+  }();
+  const subject = runtime({ store });
+  const accepted = await subject.prepare();
+  const jobId = accepted.job.envelope.job_id;
+  // The rejection must not escape cleanup: the bounded INVALID_STATE result
+  // stands and no unhandled rejection reaches the process.
+  const response = await subject.relay.executeModelSummary(jobId);
+  assert.equal(response.disposition, 'INVALID_STATE');
+  assert.equal(subject.memory.retainedPackageCount(), 1, 'a failed best-effort release leaves the package retained');
 });

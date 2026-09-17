@@ -62,7 +62,7 @@ test('PX010 projector isolates failures, excludes restricted fields and never in
     freshness: { next: () => ({ epoch: '1', sequence: String(++seq) }) }, clock: () => NOW,
     sources: { company: source({ ...company, raw_model_output: 'SECRET' }),
       active_incidents: { read: () => { throw new Error('SECRET'); } },
-      workforce: source({ total: 2, active: 1, quarantined: 0, watch: 1, review: 1, secret: 'SECRET' }) },
+      workforce: source({ total: 2, active: 1, restricted: 1, watch: 1, review: 1, secret: 'SECRET' }) },
   });
   const view = await projector.project();
   assert.equal(view.contract, 'pixel.mission-control-overview.v1');
@@ -78,7 +78,7 @@ test('PX010 validates every section list/counter bound and validates omitted lis
   assert.equal(typeof contract.normalizeSection, 'function');
   const normalize = (name, data) => contract.normalizeSection(name, source(data).read(), NOW);
   assert.equal(normalize('company', { ...company, refs: Array(17).fill('ref') }).reason_code, 'PROJECTION_BOUND_EXCEEDED');
-  for (const count of [-1, 1.5, 1000001]) assert.equal(normalize('workforce', { total: count, active: 0, quarantined: 0, watch: 0, review: 0 }).availability, 'FAILED');
+  for (const count of [-1, 1.5, 1000001]) assert.equal(normalize('workforce', { total: count, active: 0, restricted: 0, watch: 0, review: 0 }).availability, 'FAILED');
   const item = (i) => ({ id: `job-${i}`, title: 'Status check', state: 'COMPLETED', reason_code: 'EXECUTION_COMPLETED', occurred_at: new Date(Date.parse(NOW) + i).toISOString() });
   const work = normalize('recent_work', { items: Array.from({ length: 13 }, (_, i) => item(i)) });
   assert.equal(work.data.items.length, 12);
@@ -129,7 +129,7 @@ test('PX010 permitted activity/attention truncation is ordered and marked; unsup
     assert.equal(normalize(name, { items: [{ ...items[0], occurred_at: 'invalid' }] }).availability, 'FAILED');
     assert.equal(normalize(name, { items: [items[0]], total_count: 1000001 }).reason_code, 'PROJECTION_BOUND_EXCEEDED');
   }
-  for (const [name, data] of [['company',{ ...company, state: 'FABRICATED' }], ['workforce', { total: 1, active: 2, quarantined: 0, watch: 0, review: 0 }]]) assert.equal(normalize(name, data).availability, 'FAILED');
+  for (const [name, data] of [['company',{ ...company, state: 'FABRICATED' }], ['workforce', { total: 1, active: 1, restricted: 1, watch: 0, review: 0 }]]) assert.equal(normalize(name, data).availability, 'FAILED');
   assert.equal(contract.normalizeSection('company', { availability: 'FAILED', diagnostic: 'x'.repeat(257) }, NOW).reason_code, 'PROJECTION_BOUND_EXCEEDED');
   assert.equal(normalize('company', { ...company, refs: ['x'.repeat(161)] }).reason_code, 'PROJECTION_BOUND_EXCEEDED');
 });
@@ -197,4 +197,21 @@ test('PX010 freshness fails closed on crash residue and never steals any lock', 
     rmSync(lockFile);
     assert.deepEqual(freshness.openFreshnessState(path).next(), { epoch: '2', sequence: '1' });
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('PX010 projector keeps the completion clock read on the fail-closed path', async () => {
+  // The final observed_at read runs after the section reads; a clock that
+  // throws or returns garbage there must produce the bounded SOURCE_INVALID
+  // failure instead of rejecting project().
+  const make = (secondClock) => {
+    let calls = 0;
+    return new projectorModule.MissionControlOverviewProjector({
+      freshness: { next: () => ({ epoch: '1', sequence: '1' }) },
+      clock: () => { calls += 1; return calls === 1 ? NOW : secondClock(); },
+    });
+  };
+  for (const broken of [() => { throw new Error('clock exploded'); }, () => 'not-a-timestamp']) {
+    const view = await make(broken).project();
+    assert.deepEqual(view, { contract: 'pixel.mission-control-overview.v1', availability: 'FAILED', reason_code: 'SOURCE_INVALID' });
+  }
 });

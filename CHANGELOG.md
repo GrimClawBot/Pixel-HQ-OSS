@@ -69,7 +69,7 @@ The public Alpha now contains PX-001 through PX-010, including the reviewed PX-0
 - added public-safe CODEOWNERS and structured issue configuration;
 - clarified vulnerability-reporting behavior for an already-public repository.
 
-## 0.1.0-alpha — current Alpha line
+## 0.1.0-alpha — earlier Alpha line (historical)
 
 ### PX-004 — Memory / context
 

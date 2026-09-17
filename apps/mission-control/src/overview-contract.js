@@ -102,8 +102,8 @@ function dataFor(name, value) {
   if (name === 'company') {
     out = { state: code(d.state, COMPANY), summary: text(d.summary, 512), refs: refs(d.refs) };
   } else if (name === 'workforce') {
-    out = Object.fromEntries(['total','active','quarantined','watch','review'].map(k => [k, counter(d[k])]));
-    if (out.active + out.quarantined > out.total || out.watch + out.review > out.total) fail();
+    out = Object.fromEntries(['total','active','restricted','watch','review'].map(k => [k, counter(d[k])]));
+    if (out.active + out.restricted > out.total || out.watch + out.review > out.total) fail();
   } else if (name === 'storage') {
     out = {};
     for (const k of ['device_id','role_id','trace_id']) out[k] = text(d[k], 160);

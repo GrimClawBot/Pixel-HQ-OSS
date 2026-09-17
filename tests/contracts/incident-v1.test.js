@@ -162,3 +162,25 @@ test('canonical vocabularies are exported for bounded evidence', () => {
   assert.equal(RESPONSE_PHASES[0], 'DECLARE');
   assert.equal(RESPONSE_PHASES.at(-1), 'POST_INCIDENT_REVIEW');
 });
+
+test('malformed commander_transfers entries fail validation without throwing', () => {
+  // A direct adapter call passes raw records into the validator; non-record
+  // transfer entries must produce clean validation errors, never a TypeError
+  // from the transfer-chain checks, and must never validate as transferred.
+  for (const transfers of [[null], [null, null], [{}], [{}, null]]) {
+    let validation;
+    assert.doesNotThrow(() => { validation = validateIncidentV1(baseRecord({ commander_transfers: transfers })); });
+    assert.equal(validation.ok, false, JSON.stringify(transfers));
+    assert.ok(validation.errors.length > 0, JSON.stringify(transfers));
+  }
+  // A well-formed chain ending at the current commander stays valid.
+  assert.equal(validateIncidentV1(baseRecord({
+    commander_transfers: [{ prior_commander_ref: 'PIXEL-ALPHA-IC', new_commander_ref: 'PIXEL-SYSTEMS-IC', reason_code: 'HANDOVER', actor_ref: 'PIXEL-ALPHA-IC', transferred_at: NOW, revision: 1 }],
+    commander_ref: 'PIXEL-SYSTEMS-IC',
+  })).ok, true);
+  // A chain broken by a non-record entry is still rejected, not reinterpreted.
+  assert.equal(validateIncidentV1(baseRecord({
+    commander_transfers: [null],
+    commander_ref: 'PIXEL-SYSTEMS-IC',
+  })).ok, false);
+});

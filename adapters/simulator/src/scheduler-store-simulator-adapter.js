@@ -23,16 +23,6 @@ export class SimulatorSchedulerStoreAdapter {
     return entry ? frozenCopy(entry.value) : null;
   }
 
-  #activeFor(resourceRef, now) {
-    for (const entry of this.#reservations.values()) {
-      if (entry.value.resource_ref !== resourceRef) continue;
-      if (!['ACTIVE'].includes(entry.value.state)) continue;
-      if (Date.parse(entry.value.expires_at) <= Date.parse(now)) continue;
-      return entry;
-    }
-    return null;
-  }
-
   // Reservation means capacity ownership only, never authority. An exclusive
   // resource is claimed atomically: if a live (unexpired) reservation already
   // owns the resource, this attempt fails closed rather than double-allocating.
@@ -64,10 +54,12 @@ export class SimulatorSchedulerStoreAdapter {
     return this.#project(this.#reservations.get(reservationId));
   }
 
-  // Releases expire stale leases lazily before returning the current record so
-  // a crashed worker cannot hold capacity forever through wall-clock passage.
+  // Expiry is lazy and now-driven: a reservation is expired only by an
+  // evaluation carrying a valid current time, so wall-clock passage alone
+  // never mutates stored state and an invalid now cannot expire anything.
   #expireIfNeeded(entry, now) {
     if (!entry) return entry;
+    if (typeof now !== 'string' || !Number.isFinite(Date.parse(now))) return entry;
     if (entry.value.state !== 'ACTIVE') return entry;
     if (Date.parse(entry.value.expires_at) > Date.parse(now)) return entry;
     entry.value = frozenCopy({
@@ -78,6 +70,18 @@ export class SimulatorSchedulerStoreAdapter {
       expires_at: null,
     });
     return entry;
+  }
+
+  // Capacity checks expire a stale ACTIVE lease before treating it as the
+  // resource owner, so an expired reservation can never double-count.
+  #activeFor(resourceRef, now) {
+    for (const entry of this.#reservations.values()) {
+      if (entry.value.resource_ref !== resourceRef) continue;
+      this.#expireIfNeeded(entry, now);
+      if (entry.value.state !== 'ACTIVE') continue;
+      return entry;
+    }
+    return null;
   }
 
   current(reservationId, { now } = {}) {
@@ -114,8 +118,15 @@ export class SimulatorSchedulerStoreAdapter {
     return { disposition: 'UPDATED', reservation: this.#project(entry) };
   }
 
-  activeReservations() {
+  // Active-capacity projection applies the same lazy expiry as reserve() and
+  // current(), so a stale expired ACTIVE record can never be projected as
+  // available capacity. The evaluation instant is required and validated.
+  activeReservations({ now } = {}) {
+    if (typeof now !== 'string' || !Number.isFinite(Date.parse(now))) {
+      throw new TypeError('activeReservations requires a valid now');
+    }
     return [...this.#reservations.values()]
+      .map((entry) => this.#expireIfNeeded(entry, now))
       .map((entry) => this.#project(entry))
       .filter((reservation) => reservation.state === 'ACTIVE');
   }

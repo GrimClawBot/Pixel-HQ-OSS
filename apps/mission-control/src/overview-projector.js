@@ -41,7 +41,10 @@ export class MissionControlOverviewProjector {
       } catch { sections[name] = { availability: 'FAILED', reason_code: 'SOURCE_READ_FAILED' }; }
       finally { clearTimeout(timer); }
     }));
-    observed_at = new Date(this.#clock()).toISOString();
+    // The completion timestamp is re-read after the section reads so it bounds
+    // them from above; the guarded read keeps a throwing or invalid clock on
+    // the bounded fail-closed path instead of rejecting project().
+    try { observed_at = new Date(this.#clock()).toISOString(); } catch { return failure('SOURCE_INVALID'); }
     const incidents = sections.active_incidents;
     const incident_override = ['AVAILABLE', 'STALE'].includes(incidents.availability)
       && incidents.data.items.some(i => ['SEV-0', 'SEV-1'].includes(i.severity))

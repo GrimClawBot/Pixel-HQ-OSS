@@ -14,10 +14,10 @@ export function renderSection(name, section) {
   let content = '';
   if (name === 'storage') content = renderStorageCard(d);
   else if (name === 'company') content = `<p class="company-state">${e(d.state)}</p><p>${e(d.summary)}</p>`;
-  else if (name === 'workforce') content = `<dl class="metrics"><div><dt>Employees</dt><dd>${d.total}</dd></div><div><dt>Active lifecycle</dt><dd>${d.active}</dd></div><div><dt>Quarantined</dt><dd>${d.quarantined}</dd></div></dl><p class="muted">Observations: ${d.watch} WATCH · ${d.review} REVIEW</p><small>Employee identity is separate from model/runtime identity.</small>`;
+  else if (name === 'workforce') content = `<dl class="metrics"><div><dt>Employees</dt><dd>${d.total}</dd></div><div><dt>Active lifecycle</dt><dd>${d.active}</dd></div><div><dt>Restricted</dt><dd>${d.restricted}</dd></div></dl><p class="muted">Observations: ${d.watch} WATCH · ${d.review} REVIEW</p><small>Employee identity is separate from model/runtime identity.</small>`;
   else if (name === 'active_incidents') content = d.items.length ? `<ul class="incident-list">${d.items.map(i => `<li><strong>${e(i.incident_class)} · ${e(i.severity)} · ${e(i.state)}</strong><p>${e(i.summary)} · ${i.affected_resource_count} affected resources</p><small>${e(i.id)}${i.phase ? ` · ${e(i.phase)}` : ''}</small></li>`).join('')}</ul>` : `<p>${s.availability === 'STALE' ? 'Incident state is stale. Current incidents are unknown.' : 'No active incidents'}</p>`;
   else if (name === 'facilities') content = `<dl class="metrics"><div><dt>Power</dt><dd>${e(d.power_state)}</dd></div><div><dt>Thermal</dt><dd>${e(d.thermal_state)}</dd></div></dl><p>${e(d.summary)}</p>`;
-  else content = d.items.length ? rows(d.items) : `<p class="muted">${name === 'recent_work' ? 'No recent Relay work.' : name === 'needs_you' ? 'Nothing needs your attention.' : 'No recorded activity.'}</p>`;
+  else content = d.items.length ? rows(d.items) : `<p class="muted">${name === 'recent_work' ? 'No recent Relay work.' : name === 'needs_you' ? 'Nothing needs your attention.' : name === 'ai_compute' ? 'No AI Compute records.' : 'No recorded activity.'}</p>`;
   return `<div class="section-meta">${badge(s)}<time datetime="${e(s.observed_at)}">Observed ${e(new Date(s.observed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time></div>${content}${d.truncated ? `<p class="muted">Showing ${d.items.length} of ${d.total_count} · truncated</p>` : ''}`;
 }
 export function renderSystems(section) {

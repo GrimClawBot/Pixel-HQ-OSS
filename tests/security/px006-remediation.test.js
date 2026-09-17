@@ -127,7 +127,7 @@ test('a denied issued evaluation cannot be rewritten as eligible', async () => {
   const result = runtime.scheduler.reserve({ evaluation: forged, job_id: job.envelope.job_id });
   assert.equal(result.disposition, 'DENY');
   assert.equal(result.reservation, null);
-  assert.equal(runtime.schedulerStore.activeReservations().length, 0);
+  assert.equal(runtime.schedulerStore.activeReservations({ now: NOW }).length, 0);
 });
 
 test('an issued evaluation cannot redirect its reserved resource', async () => {
@@ -143,7 +143,7 @@ test('an issued evaluation cannot redirect its reserved resource', async () => {
   const result = runtime.scheduler.reserve({ evaluation: forged, job_id: job.envelope.job_id });
   assert.equal(result.disposition, 'DENY');
   assert.equal(result.reservation, null);
-  assert.equal(runtime.schedulerStore.activeReservations().length, 0);
+  assert.equal(runtime.schedulerStore.activeReservations({ now: NOW }).length, 0);
 });
 
 test('forged, stale, mismatched, and non-issued evaluations cannot mint reservations', async () => {
@@ -278,7 +278,7 @@ test('a stage-2 rejection does not wedge the model path: the job can be retried 
   assert.equal(rejected.reason_code, 'HOLD_SECURITY');
   assert.equal((await subject.store.getJob(jobId)).current_state, 'ACCEPTED');
 
-  assert.equal(subject.schedulerStore.activeReservations().length, 0, 'rejected start must not hold capacity');
+  assert.equal(subject.schedulerStore.activeReservations({ now: NOW }).length, 0, 'rejected start must not hold capacity');
   subject.orgState.releaseHold({ hold_id: 'hold-001', expected_revision: 1 });
   const retry = await subject.relay.executeModelSummary(jobId);
   assert.equal(retry.disposition, 'COMPLETED', `retry must complete, got ${retry.disposition}`);
@@ -306,7 +306,7 @@ test('a non-terminal worker exit does not leak the tracked reservation', async (
   assert.equal(result.disposition, 'UNAVAILABLE');
   // The reservation is released (no capacity leak) after the dependency failure:
   // assert the scheduler store itself holds no active reservation for the job.
-  assert.equal(subject.schedulerStore.activeReservations().length, 0, 'no reservation may leak on a non-terminal exit');
+  assert.equal(subject.schedulerStore.activeReservations({ now: NOW }).length, 0, 'no reservation may leak on a non-terminal exit');
 });
 
 test('Relay rejects a simulator requirement provider outside dev/simulation', () => {
@@ -321,7 +321,7 @@ test('Relay rejects a simulator requirement provider outside dev/simulation', ()
   };
   assert.throws(() => new RelayService({
     ...base, environment: 'shadow',
-    scheduler: { evaluate() {}, reserve() {}, confirmExecutionStart() {} },
+    scheduler: { evaluate() {}, reserve() {}, confirmExecutionStart() {}, release() {} },
     requirementProvider: new SimulatorExecutionRequirementProvider(),
   }), /Simulator Relay adapters may run only in dev or simulation/);
 });

@@ -54,3 +54,20 @@ test('refused incident evidence must carry a bounded reason and denied outcome',
   const missingReason = { ...refused, attributes: {} };
   assert.equal(assessIncidentTraceCompleteness([missingReason]).complete, false);
 });
+
+test('every revision-bearing event requires a positive revision', () => {
+  const attributesFor = (event) => {
+    if (event === 'incident.phase.advanced') {
+      return { 'pixel.incident.incident_id': 'incident-001', 'pixel.incident.status': 'OPEN', 'pixel.incident.phase': 'CONTAIN', 'pixel.incident.revision': 0 };
+    }
+    if (event === 'incident.command.transferred') {
+      return { 'pixel.incident.incident_id': 'incident-001', 'pixel.incident.commander_ref': 'PIXEL-SYSTEMS-IC', 'pixel.incident.revision': -1 };
+    }
+    return { 'pixel.incident.incident_id': 'incident-001', 'pixel.incident.phase': 'POST_INCIDENT_REVIEW', 'pixel.incident.revision': 0 };
+  };
+  for (const event of ['incident.phase.advanced', 'incident.command.transferred', 'incident.post-review.recorded']) {
+    const result = assessIncidentTraceCompleteness([record({ event_name: event, attributes: attributesFor(event) })]);
+    assert.equal(result.complete, false, event);
+    assert.match(result.errors.join(' '), /positive revision/, event);
+  }
+});

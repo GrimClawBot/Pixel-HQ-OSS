@@ -50,7 +50,7 @@ export class SimulatorIncidentStoreAdapter {
     if (!validation.ok) {
       return { disposition: 'REJECTED', reason_code: 'RECORD_INVALID', record: null, errors: validation.errors };
     }
-    if (typeof operationId !== 'string' || operationId.length > 160) {
+    if (typeof operationId !== 'string' || operationId.length === 0 || operationId.length > 160) {
       return { disposition: 'REJECTED', reason_code: 'OPERATION_INVALID', record: null };
     }
     const key = this.#operationKey(operationId, id);

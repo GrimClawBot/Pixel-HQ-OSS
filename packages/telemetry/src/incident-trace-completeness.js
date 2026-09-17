@@ -70,7 +70,7 @@ export function assessIncidentTraceCompleteness(records) {
       && !RESPONSE_PHASES.includes(attributes['pixel.incident.phase'])) {
       errors.push(`${record.event_name} carries an invalid response phase`);
     }
-    if (['incident.created', 'incident.acknowledged', 'incident.resolved', 'incident.closed'].includes(record.event_name)
+    if (rule[1].includes('pixel.incident.revision')
       && (!Number.isSafeInteger(attributes['pixel.incident.revision']) || attributes['pixel.incident.revision'] < 1)) {
       errors.push(`${record.event_name} requires a positive revision`);
     }

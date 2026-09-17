@@ -6,7 +6,14 @@ function mode(source, environment) {
   if (source === 'live') return 'LIVE';
   throw new Error('SOURCE_INVALID');
 }
+const CANONICAL_SOURCE_MODES = ['SIMULATED', 'SHADOW', 'LIVE'];
 export function createOverviewSources({ projector, relay, orgState = null, incidents = null, workforce = null, sourceMode = null, clock }) {
+  // Canonical company/incident readers stamp this configured mode on every
+  // available section; an invalid configuration must fail at construction
+  // instead of failing every request with SOURCE_INVALID later.
+  if ((orgState !== null || incidents !== null) && !CANONICAL_SOURCE_MODES.includes(sourceMode)) {
+    throw new TypeError('Canonical overview sources require a SIMULATED, SHADOW, or LIVE source mode');
+  }
   const ready = (data, source_mode, observed_at = clock()) => ({ availability: 'AVAILABLE', source_mode, observed_at, data });
   return {
     storage: { read() {

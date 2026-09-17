@@ -214,7 +214,10 @@ export function validateIncidentV1(value) {
   }
   // Exactly one commander: the transfer chain is contiguous and ends at the
   // current commander_ref. A broken chain means silent replacement occurred.
-  const transfers = Array.isArray(value.commander_transfers) ? value.commander_transfers : [];
+  // Chain checks dereference record fields only; validateTransfer already
+  // rejected non-record entries, so malformed input fails closed as
+  // RECORD_INVALID instead of throwing here.
+  const transfers = Array.isArray(value.commander_transfers) ? value.commander_transfers.filter(isRecord) : [];
   for (let index = 1; index < transfers.length; index += 1) {
     if (transfers[index].prior_commander_ref !== transfers[index - 1].new_commander_ref) {
       errors.push('commander transfer chain is broken');

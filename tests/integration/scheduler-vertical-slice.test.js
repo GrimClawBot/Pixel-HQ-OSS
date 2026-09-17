@@ -212,7 +212,7 @@ test('not-before timing produces WAIT_NOT_BEFORE until the instant passes', asyn
   assert.equal(atTime.disposition, 'ELIGIBLE');
 });
 
-test('dependency PENDING waits, BLOCKED and FAILED deny', async () => {
+test('dependency PENDING, UNKNOWN, and BLOCKED wait; only FAILED denies', async () => {
   const runtime = schedulerRuntime();
   const job = withJob(runtime);
   for (const [status, decision, reason] of [

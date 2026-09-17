@@ -231,6 +231,12 @@ export class MemoryService {
         attributes: { 'pixel.memory.released_count': released.length },
       });
     }
+    if (released.length === 0) {
+      // Still over the bound with nothing releasable: every candidate was
+      // protected by a live job or its job could not be resolved. Report the
+      // truthful over-bound outcome instead of a release that never happened.
+      return { disposition: 'DEFERRED', reason_code: 'OVER_BOUND_RETENTION_DEFERRED', released: [] };
+    }
     return { disposition: 'RELEASED', reason_code: 'ABANDONED_RELEASED', released };
   }
 

@@ -73,8 +73,20 @@ test('PX010 Workforce read aggregates canonical records without model identity o
   assert.equal(typeof r.workforce.homeSummary, 'function');
   const summary = r.workforce.homeSummary();
   assert.equal(summary.total, 1); assert.equal(summary.active, 1);
-  assert.equal(summary.quarantined, 0);
+  assert.equal(summary.restricted, 0);
+  assert.equal(Object.hasOwn(summary, 'quarantined'), false);
   assert.doesNotMatch(JSON.stringify(summary), /agent_id|model|evidence/);
+});
+
+test('PX010 Workforce summary counts canonical LIMITED and RETRAINING as restricted', () => {
+  for (const lifecycle of ['LIMITED', 'RETRAINING']) {
+    const r = workforceRuntime();
+    seedActiveWorkforce(r, { lifecycle });
+    const summary = r.workforce.homeSummary();
+    assert.equal(summary.total, 1);
+    assert.equal(summary.active, 0, lifecycle);
+    assert.equal(summary.restricted, 1, lifecycle);
+  }
 });
 
 test('PX010 Workforce summary uses bounded store seams and validates every result', () => {
@@ -118,6 +130,22 @@ test('PX010 source mode keeps SIMULATED ahead of SHADOW ahead of LIVE', async ()
     // Simulator provenance outranks the environment: SHADOW never masks SIMULATED.
     assert.equal((await sources('simulator', 'shadow')[reader].read()).source_mode, 'SIMULATED');
   }
+});
+
+test('PX010 canonical overview sources validate their configured mode at construction', () => {
+  const base = { projector: { getDevice: () => null }, relay: { recentWork: async () => null }, clock: () => NOW };
+  // Canonical company/incident readers stamp the configured mode on available
+  // sections, so an invalid configuration must fail at construction instead of
+  // failing every request with SOURCE_INVALID at read time.
+  for (const sourceMode of [null, undefined, 'SIMULATED-2', 'simulated']) {
+    assert.throws(() => createOverviewSources({ ...base, orgState: { evaluateExecutionInputs: () => ({}) }, sourceMode }), TypeError);
+    assert.throws(() => createOverviewSources({ ...base, incidents: { activeIncidents: () => [] }, sourceMode }), TypeError);
+  }
+  for (const sourceMode of ['SIMULATED', 'SHADOW', 'LIVE']) {
+    assert.equal(typeof createOverviewSources({ ...base, orgState: { evaluateExecutionInputs: () => ({}) }, incidents: { activeIncidents: () => [] }, sourceMode }).company.read, 'function');
+  }
+  // Without canonical sources there is nothing to stamp: construction stays legal.
+  assert.equal(typeof createOverviewSources(base).storage.read, 'function');
 });
 
 test('PX010 storage and Relay reads carry their applicable environment', async t => {
