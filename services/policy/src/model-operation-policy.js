@@ -12,7 +12,7 @@ export function evaluateModelOperationEligibility({ operation, execution } = {})
     && execution !== null
     && typeof execution === 'object'
     && !Array.isArray(execution)
-    && Object.keys(ELIGIBLE).every((key) => execution[key] === ELIGIBLE[key])
+    && Object.keys(ELIGIBLE).every((key) => Object.hasOwn(execution, key) && execution[key] === ELIGIBLE[key])
     && Object.keys(execution).length === Object.keys(ELIGIBLE).length;
   return Object.freeze({
     decision: allowed ? 'ALLOW' : 'DENY',

@@ -65,6 +65,38 @@ test('safe snapshot rejects accessors, exotic prototypes, cycles, symbols, and u
   assert.throws(() => assertSafePlainData({ ['x'.repeat(100_000)]: true }), /plain data/);
 });
 
+test('descriptor walk covers own length keys on plain objects without reading accessors', () => {
+  let executed = 0;
+  const hidden = {};
+  Object.defineProperty(hidden, 'booby', { enumerable: true, get() { executed += 1; return 'ran'; } });
+  assert.throws(() => assertSafePlainData({ length: hidden }), /plain data/);
+  assert.equal(executed, 0);
+
+  const accessorLength = {};
+  Object.defineProperty(accessorLength, 'length', { enumerable: true, get() { executed += 1; return 'L'; } });
+  assert.throws(() => assertSafePlainData(accessorLength), /plain data/);
+  assert.equal(executed, 0);
+
+  const cyclicLength = { length: {} };
+  cyclicLength.length.self = cyclicLength.length;
+  assert.throws(() => assertSafePlainData(cyclicLength), /plain data/);
+
+  const exoticLength = { length: Object.create({ inherited: true }) };
+  assert.throws(() => assertSafePlainData(exoticLength), /plain data/);
+
+  let deepLength = { value: 'leaf' };
+  for (let index = 0; index < 17; index += 1) deepLength = { child: deepLength };
+  assert.throws(() => assertSafePlainData({ length: deepLength }), /plain data/);
+
+  assert.throws(() => assertSafePlainData({ length: { value: 'x'.repeat(4097) } }), /plain data/);
+  assert.throws(() => assertSafePlainData({ length: { value: undefined } }), /plain data/);
+});
+
+test('array length key is exempt from the key quota while arrays stay bounded', () => {
+  assert.doesNotThrow(() => assertSafePlainData(Array.from({ length: 64 }, (_, index) => index)));
+  assert.throws(() => assertSafePlainData(Array.from({ length: 65 }, (_, index) => index)), /plain data/);
+});
+
 test('provider result snapshot validates the exact isolated bytes', () => {
   const canonical = {
     provider_result_id: 'provider-result-001', schema_version: '1.0.0',

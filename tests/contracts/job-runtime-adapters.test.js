@@ -168,6 +168,7 @@ test('adapter SDK accepts independent live-shaped implementations', () => {
     recordGatewayDecision() {},
     claimWorkerInvocation() {},
     claimModelContextPreparation() {},
+    releaseModelContextPreparation() {},
     claimModelInvocation() {},
     commitTerminalResult() {},
   }).source, 'live');

@@ -13,6 +13,7 @@ export const MODEL_OPERATION_POLICY_ID = 'pixel.model-operation.alpha.v1';
 export const MODEL_OUTPUT_MAX_CHARS = 512;
 export const MODEL_CONTEXT_MAX_ITEMS = 4;
 export const MODEL_CONTEXT_MAX_TEXT_CHARS = 2048;
+export const MODEL_PROVIDER_RESULT_MAX_ID_CHARS = 64;
 
 export const SYSTEM_STATUS_SUMMARY_TEMPLATE = Object.freeze({
   template_id: 'pixel.model.instruction.system-status-summary',
@@ -275,6 +276,9 @@ export function validateModelProviderResultV1(value) {
   if (!isRecord(value)) return result(['model provider result must be an object']);
   exact(value, PROVIDER_RESULT_FIELDS, 'model provider result', errors);
   identifier(value.provider_result_id, 'provider_result_id', errors);
+  if (typeof value.provider_result_id === 'string' && value.provider_result_id.length > MODEL_PROVIDER_RESULT_MAX_ID_CHARS) {
+    errors.push(`provider_result_id must not exceed ${MODEL_PROVIDER_RESULT_MAX_ID_CHARS} characters`);
+  }
   if (value.schema_version !== MODEL_SCHEMA_VERSION) errors.push(`schema_version must equal ${MODEL_SCHEMA_VERSION}`);
   identifier(value.invocation_id, 'invocation_id', errors);
   if (value.provider_contract !== MODEL_RUNTIME_ADAPTER_CONTRACT) errors.push('provider_contract is invalid');

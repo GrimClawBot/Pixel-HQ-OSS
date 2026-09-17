@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-org-state-duty-v1.schema.json",
+  "title": "Pixel Duty State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "duty_id",
+    "event_name",
+    "schema_version",
+    "revision",
+    "updated_at",
+    "agent_id",
+    "duty",
+    "provenance"
+  ],
+  "properties": {
+    "duty_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.org-state.duty.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "duty": {
+      "enum": [
+        "ON_DUTY",
+        "OFF_DUTY",
+        "ON_CALL",
+        "MAINTENANCE_DUTY",
+        "INCIDENT_DUTY"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org_state_contract"
+      ],
+      "properties": {
+        "org_state_contract": {
+          "const": "pixel.organizational-state.v1"
+        }
+      }
+    }
+  }
+}

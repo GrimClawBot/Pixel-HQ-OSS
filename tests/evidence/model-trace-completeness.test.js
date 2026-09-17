@@ -21,3 +21,11 @@ test('model completeness rejects malformed records without throwing or echoing c
   assert.equal(JSON.stringify(assessment).includes('private model text'), false);
   assert.ok(assessment.errors.length <= 32);
 });
+
+test('null or non-object evidence records produce incomplete assessments without throwing', () => {
+  for (const records of [[null], [null, { event_name: 'model.invocation.created' }], ['record']]) {
+    const assessment = assessModelTraceCompleteness(records);
+    assert.equal(assessment.complete, false);
+    assert.equal(JSON.stringify(assessment).includes('Cannot'), false);
+  }
+});

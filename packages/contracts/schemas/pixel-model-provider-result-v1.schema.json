@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["provider_result_id", "schema_version", "invocation_id", "provider_contract", "runtime_id", "model_id", "source", "status", "output_text", "output_token_units"],
   "properties": {
-    "provider_result_id": { "$ref": "#/$defs/identifier" },
+    "provider_result_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 64 },
     "schema_version": { "const": "1.0.0" },
     "invocation_id": { "$ref": "#/$defs/identifier" },
     "provider_contract": { "const": "pixel.model-runtime.adapter.v1" },

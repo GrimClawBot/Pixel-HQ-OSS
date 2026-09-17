@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-workforce-attribution-v1.schema.json",
+  "title": "Pixel Workforce Attribution v1",
+  "required": [
+    "attribution_id",
+    "event_name",
+    "schema_version",
+    "agent_id",
+    "subject_ref",
+    "source_ref",
+    "primary_cause",
+    "contributing_causes",
+    "confidence",
+    "supporting_evidence_refs",
+    "related_incident_ref",
+    "observed_at",
+    "provenance"
+  ],
+  "properties": {
+    "attribution_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.workforce-attribution.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "subject_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "source_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "primary_cause": {
+      "enum": [
+        "EMPLOYEE",
+        "RUNTIME_MODEL",
+        "CONTEXT_PACKAGE",
+        "TOOL",
+        "DEPENDENCY",
+        "POLICY_AUTHORIZATION",
+        "INFRASTRUCTURE",
+        "EXTERNAL_PROVIDER",
+        "PROCESS_WORKFLOW",
+        "MIXED",
+        "UNKNOWN"
+      ]
+    },
+    "contributing_causes": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "EMPLOYEE",
+          "RUNTIME_MODEL",
+          "CONTEXT_PACKAGE",
+          "TOOL",
+          "DEPENDENCY",
+          "POLICY_AUTHORIZATION",
+          "INFRASTRUCTURE",
+          "EXTERNAL_PROVIDER",
+          "PROCESS_WORKFLOW",
+          "MIXED",
+          "UNKNOWN"
+        ]
+      }
+    },
+    "confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "supporting_evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "maxLength": 160
+      }
+    },
+    "related_incident_ref": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workforce_contract"
+      ],
+      "properties": {
+        "workforce_contract": {
+          "const": "pixel.workforce.v1"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-recurring-occurrence-v1.schema.json",
+  "title": "Pixel Recurring Occurrence v1",
+  "required": [
+    "occurrence_id",
+    "event_name",
+    "schema_version",
+    "template_id",
+    "template_revision",
+    "template_fingerprint",
+    "scheduled_at",
+    "status",
+    "relay_job_id",
+    "relay_idempotency_key",
+    "attempt_count",
+    "last_attempt_at",
+    "created_at",
+    "updated_at",
+    "provenance",
+    "revision"
+  ],
+  "properties": {
+    "occurrence_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.recurring-occurrence.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "template_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "template_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "template_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scheduled_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "status": {
+      "enum": [
+        "DUE",
+        "SUBMISSION_PENDING",
+        "SUBMITTED",
+        "SKIPPED",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "relay_job_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "relay_idempotency_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "attempt_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "last_attempt_at": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calendar_contract"
+      ],
+      "properties": {
+        "calendar_contract": {
+          "const": "pixel.calendar.v1"
+        }
+      }
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUBMITTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "relay_job_id": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "relay_job_id": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

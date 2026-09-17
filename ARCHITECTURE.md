@@ -8,6 +8,8 @@ Pixel HQ separates organizational authority from the model, UI, hardware vendor,
 
 ## Current public Alpha
 
+The current public Alpha contains PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha.
+
 ```mermaid
 flowchart TB
     subgraph Presentation
@@ -20,6 +22,11 @@ flowchart TB
       R[Relay]
       M[Memory]
       MG[Model Gateway]
+      OS[Organizational State]
+      S[Scheduler]
+      IN[Incident]
+      CAL[Calendar]
+      WF[Workforce]
       TG[Tool Gateway]
       POL[Policy]
     end
@@ -51,7 +58,13 @@ flowchart TB
     REG --> R
     R --> M
     R --> MG
+    R --> S
     R --> TG
+    IN --> OS
+    CAL --> OS
+    WF --> OS
+    OS --> S
+    WF --> S
     POL --> M
     POL --> TG
     TG --> WK
@@ -67,6 +80,11 @@ flowchart TB
     R --> EV
     M --> EV
     MG --> EV
+    OS --> EV
+    S --> EV
+    IN --> EV
+    CAL --> EV
+    WF --> EV
     TG --> EV
     WK --> EV
     EV --> TC
@@ -77,6 +95,8 @@ flowchart TB
 ### Presentation
 
 Mission Control renders backend decisions and device state. The browser may submit bounded intent, but it does not create identity, trust, ownership, Memory scope, grants, lifecycle state, or tool authority.
+
+Mission Control Home is a read-only overview over injected canonical sources. The server owns the exact decimal freshness order, validates bounded section projections, and exposes only a GET endpoint. The browser renders explicit AVAILABLE, STALE, UNAVAILABLE, DENIED, FAILED, and UNKNOWN states; it never reconstructs authority or mutates canonical state.
 
 ### Access Gate
 
@@ -102,6 +122,22 @@ PX-005 exposes only the Pixel-owned `SYSTEM_STATUS_SUMMARY` operation. Relay res
 
 The fixed instruction and approved item text are measured in Pixel Alpha token units with the existing Memory tokenizer. This accounting is not a vendor-tokenizer, billing, or production-token claim.
 
+### Organizational State and Scheduler
+
+PX-006 adds canonical approvals, delegations, holds, duty, capacity, and derived Company State with optimistic revision guards and Trusted Time expiry checks. Scheduler evaluates those facts into `ELIGIBLE`, `WAIT`, `HOLD`, or `DENY`, reserves capacity with bounded leases, and rechecks current facts immediately before Relay may enter `RUNNING`. Eligibility and reservations never grant authority; Access/Policy and Relay retain their existing ownership.
+
+### Incident
+
+PX-007 gives Incident ownership of canonical incident truth, one commander, lifecycle, phase, impact, recovery, and bounded evidence. Incident facts compose through Organizational State; incident-linked holds reuse existing classes; Scheduler rechecks incident safety at stage two. Resolving one incident cannot clear another incident or hold.
+
+### Calendar
+
+PX-008 owns planned calendar and recurring-work truth. Trusted Time provides authoritative time semantics, Organizational State composes operating facts, and Scheduler reacts to timing and eligibility conditions. Recurring occurrences use deterministic Relay idempotency and revision-guarded checkpoints; Calendar does not create a second job lifecycle engine.
+
+### Workforce and AgentOps
+
+PX-009 owns persistent synthetic Pixel employee records, per-capability qualifications, causal attribution, bounded evidence, and AgentOps projections. Workforce facts compose through Organizational State and are rechecked by Scheduler immediately before `RUNNING`. Qualification is an eligibility fact, never an authorization grant; Access and Policy retain authority.
+
 ### Adapters
 
 The public Alpha uses simulator implementations behind Pixel-owned seams. A future live implementation must satisfy the same boundary and is still revalidated by the receiving Pixel service.
@@ -123,6 +159,11 @@ Security and lifecycle events are emitted as bounded structured evidence. Comple
 9. **Evidence must be reconstructable without hidden model reasoning.**
 10. **Simulation, Shadow, Canary, and Production are distinct maturity boundaries.**
 11. **Runtime/model identity is distinct from Pixel agent identity and cannot create authority.**
+12. **Scheduler eligibility and reservations cannot grant authority or create Relay lifecycle states.**
+13. **Incident owns incident truth; Organizational State composes facts and Scheduler reacts.**
+14. **Calendar owns planned operating facts; Relay remains the recurring-job lifecycle owner.**
+15. **Workforce owns canonical employee-record truth, while AgentOps projections remain bounded evidence rather than authority.**
+16. **Mission Control Home is presentation-only; freshness is exact decimal ordering, and stale or failed sources cannot render as fresh/healthy.**
 
 ## Completed slices
 
@@ -133,9 +174,14 @@ Security and lifecycle events are emitted as bounded structured evidence. Comple
 | PX-003 | Relay lifecycle + Tool Gateway + deterministic worker + causal evidence |
 | PX-004 | Memory intake/context contracts + server-owned scope + deterministic filtering/budgets + Relay-linked evidence |
 | PX-005 | Relay-owned fixed model invocation + deterministic simulator routing + bounded Gateway result/evidence |
+| PX-006 | Organizational State facts + fail-closed Scheduler eligibility/reservations + stage-two start confirmation |
+| PX-007 | Canonical Incident lifecycle + degraded Company State mapping + holds + stage-two safety recheck |
+| PX-008 | Company Calendar/hours + immutable recurring definitions + deterministic Relay submission + bounded missed-run/overlap handling |
+| PX-009 | Persistent Workforce lifecycle + capability qualification + causal attribution + bounded AgentOps projections + stage-two gate |
+| PX-010 | Mission Control Home + read-only overview projection + exact freshness ordering + bounded source modes and states |
 
 See [`docs/architecture/alpha-milestones.md`](docs/architecture/alpha-milestones.md) for the public milestone summary.
 
 ## Not production claims
 
-The current source does **not** provide production PKI, secret storage, durable queues/databases, durable audit retention, production network exposure, real infrastructure/model providers, vendor token accounting, fallback/retries, disaster recovery, autonomous patching, a continuously running LLM workforce, or a production-grade Memory store. Those capabilities require separate design, review, and promotion.
+The current source does **not** provide production PKI, secret storage, durable queues/databases, durable audit retention, production network exposure, production authentication, real infrastructure/model providers, vendor token accounting, fallback/retries, disaster recovery, autonomous patching, a continuously running LLM workforce, production Workforce/AgentOps management, production calendar integrations, or a production-grade Memory store. Mission Control is an unauthenticated Alpha service: it defaults to `127.0.0.1`, configuration can override the bind address, and non-loopback or production exposure requires a separately authorized security milestone.

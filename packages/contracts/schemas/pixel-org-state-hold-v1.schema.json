@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-org-state-hold-v1.schema.json",
+  "title": "Pixel Organizational State Hold v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "hold_id",
+    "event_name",
+    "schema_version",
+    "status",
+    "revision",
+    "created_at",
+    "updated_at",
+    "job_id",
+    "hold_class",
+    "issuer",
+    "reason_code",
+    "expires_at",
+    "provenance"
+  ],
+  "properties": {
+    "hold_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.org-state.hold.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "enum": [
+        "ACTIVE",
+        "RELEASED",
+        "EXPIRED"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "hold_class": {
+      "enum": [
+        "SECURITY",
+        "POLICY",
+        "OWNER",
+        "MAINTENANCE"
+      ]
+    },
+    "issuer": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "incident_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$", "maxLength": 160 },
+        { "type": "null" }
+      ]
+    },
+    "expires_at": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org_state_contract"
+      ],
+      "properties": {
+        "org_state_contract": {
+          "const": "pixel.organizational-state.v1"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-workforce-record-v1.schema.json",
+  "title": "Pixel Workforce Record v1",
+  "required": [
+    "agent_id",
+    "event_name",
+    "schema_version",
+    "lifecycle_status",
+    "role_ref",
+    "department_ref",
+    "effective_at",
+    "revision",
+    "updated_at",
+    "history",
+    "provenance"
+  ],
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.workforce-record.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "lifecycle_status": {
+      "enum": [
+        "CANDIDATE",
+        "ACTIVE",
+        "LIMITED",
+        "RETRAINING",
+        "INACTIVE",
+        "RETIRED"
+      ]
+    },
+    "role_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "department_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "effective_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lifecycle_status",
+          "role_ref",
+          "department_ref",
+          "effective_at",
+          "revision"
+        ],
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "CANDIDATE",
+              "ACTIVE",
+              "LIMITED",
+              "RETRAINING",
+              "INACTIVE",
+              "RETIRED"
+            ]
+          },
+          "role_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "department_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "effective_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workforce_contract"
+      ],
+      "properties": {
+        "workforce_contract": {
+          "const": "pixel.workforce.v1"
+        }
+      }
+    }
+  }
+}
