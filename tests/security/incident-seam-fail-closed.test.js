@@ -198,3 +198,38 @@ test('valid canonical active incident fact still behaves normally', async () => 
   assert.equal(inputs.incident_containment_eligible, true);
   assert.equal(result.disposition, 'ELIGIBLE');
 });
+
+test('an accessor-backed incident seam fails closed instead of validating a moving target', () => {
+  // The seam hands back a record whose values are getters: pre-snapshot, the
+  // validator could read one value while Company State derivation read another.
+  // The snapshot-before-validation law rejects accessor-bearing data outright.
+  const poisoned = {};
+  Object.defineProperties(poisoned, {
+    incident_id: { enumerable: true, get: () => 'incident-001' },
+    incident_class: { enumerable: true, get: () => 'INFRASTRUCTURE' },
+    severity: { enumerable: true, get: () => 'SEV-1' },
+    status: { enumerable: true, get: () => 'OPEN' },
+    affected_resource_refs: { enumerable: true, get: () => ['simulation.storage.array-01'] },
+  });
+  const runtime = seamRuntime({ facts: [poisoned] });
+  return evaluateOrdinary(runtime).then(({ result, inputs }) => {
+    assert.equal(result.disposition, 'DENY');
+    assert.equal(result.evaluation.reason_code, 'DENY_COMPANY_STATE');
+    assert.equal(inputs.incident_seam_unavailable, true);
+    assert.equal(inputs.company_state, 'NORMAL');
+  });
+});
+
+test('validated incident facts are an immutable snapshot of the seam result', async () => {
+  const facts = [structuredClone(VALID_ACTIVE_FACT)];
+  const runtime = seamRuntime({ facts });
+  const { inputs } = await evaluateOrdinary(runtime);
+  // A SEV-1 infrastructure incident drives the derived Company State...
+  assert.equal(inputs.company_state, 'INFRASTRUCTURE_OR_ENVIRONMENT_INCIDENT');
+  // ...from an immutable snapshot, not from the live seam array: mutating the
+  // array the seam still holds can never rewrite already-derived facts.
+  assert.equal(Object.isFrozen(inputs.incident_facts), true, 'projected incident facts are frozen');
+  facts.push({ ...structuredClone(VALID_ACTIVE_FACT), incident_id: 'incident-evil', severity: 'SEV-0' });
+  facts[0].severity = 'SEV-0';
+  assert.equal(inputs.company_state, 'INFRASTRUCTURE_OR_ENVIRONMENT_INCIDENT');
+});

@@ -54,6 +54,7 @@ export class SimulatorWorkforceStoreAdapter {
   #latestEvaluations = new Map();
   #operations = new Map();
   #keys = new Map();
+  #recordKeys = new Map();
 
   get source() {
     return 'simulator';
@@ -105,14 +106,17 @@ export class SimulatorWorkforceStoreAdapter {
     const bucket = this.#bucket(kind);
     const current = bucket.get(id);
 
-    // Unique-key enforcement: a create cannot shadow an existing current
-    // record for the same (agent, capability) / agent pair.
+    // Unique-key enforcement: no write may shadow another current record's
+    // (agent, capability) / agent pair. This applies to creates and to
+    // revisioned updates alike: a revised qualification that moved onto
+    // another record's key would otherwise leave two current records for one
+    // canonical pair and let reads return superseded truth.
     const unique = uniquenessKey(kind, value);
     const uniqueIndex = this.#keys.get(kind) ?? new Map();
     this.#keys.set(kind, uniqueIndex);
     if (unique !== null) {
       const holder = uniqueIndex.get(unique);
-      if (holder !== undefined && holder !== id && (contract.revisioned ? value.revision === 1 : current === undefined)) {
+      if (holder !== undefined && holder !== id) {
         return { disposition: 'REJECTED', reason_code: 'ALREADY_EXISTS', record: this.#project(bucket.get(holder)) };
       }
     }
@@ -144,7 +148,16 @@ export class SimulatorWorkforceStoreAdapter {
         this.#latestEvaluations.set(value.agent_id, entry);
       }
     }
-    if (unique !== null) uniqueIndex.set(unique, id);
+    if (unique !== null) {
+      // A revisioned write that moved this record to a new key releases the
+      // old key so a future record can claim it without stale shadowing.
+      const recordKeys = this.#recordKeys.get(kind) ?? new Map();
+      this.#recordKeys.set(kind, recordKeys);
+      const previousKey = recordKeys.get(id);
+      if (previousKey !== undefined && previousKey !== unique) uniqueIndex.delete(previousKey);
+      recordKeys.set(id, unique);
+      uniqueIndex.set(unique, id);
+    }
     this.#operations.set(operationId, {
       kind, id, fingerprint: operationFingerprint, entry,
     });

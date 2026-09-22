@@ -89,6 +89,13 @@ export function assessSchedulerTraceCompleteness(records) {
   let startSeen = false;
   let releaseSeen = false;
   let releasedBeforeStart = false;
+  // One evidence family proves one scheduler attempt: every record must
+  // belong to the same canonical job, and reservation-bearing records must
+  // agree on the one activated reservation. A start rejected for an unknown
+  // or expired reservation (no activation in trace) is the one legitimate
+  // path whose reservation id cannot be cross-checked.
+  let jobId = null;
+  let activatedReservationId = null;
 
   for (const record of records) {
     const rule = EVENT_RULES.get(record?.event_name);
@@ -109,12 +116,20 @@ export function assessSchedulerTraceCompleteness(records) {
       errors.push(`${record.event_name} has unbounded or unsupported attributes`);
     }
 
+    const attributes = record.attributes ?? {};
+    if (jobId === null) jobId = attributes['pixel.job.id'];
+    else if (jobId !== attributes['pixel.job.id']) errors.push('scheduler evidence mixes multiple jobs');
+    if (activatedReservationId !== null
+      && ['scheduler.reservation.released', 'scheduler.start.confirmed', 'scheduler.start.rejected'].includes(record.event_name)
+      && attributes['pixel.scheduler.reservation_id'] !== activatedReservationId) {
+      errors.push('scheduler evidence references more than one reservation');
+    }
+
     // Post-terminal: nothing may follow a confirmed or rejected start.
     if (startSeen && !releaseSeen && record.event_name !== 'scheduler.reservation.released') {
       errors.push(`${record.event_name} appears after the start outcome`);
     }
 
-    const attributes = record.attributes ?? {};
     const reason = attributes['pixel.scheduler.reason_code'];
     if (record.event_name === 'scheduler.evaluation.completed') {
       evaluationCount += 1;
@@ -131,6 +146,7 @@ export function assessSchedulerTraceCompleteness(records) {
       if (activationCount > 1) errors.push('trace activates more than one reservation');
       if (!eligibleSeen) errors.push('reservation activated without an eligible evaluation in trace');
       if (startSeen) errors.push('reservation activated after the start outcome');
+      activatedReservationId = attributes['pixel.scheduler.reservation_id'];
     }
     if (record.event_name === 'scheduler.reservation.rejected') {
       if (record.outcome !== 'denied' || reason !== 'WAIT_CAPACITY') {

@@ -267,3 +267,79 @@ test('Relay requires scheduler.release alongside the other scheduler methods', (
     requirementProvider: new SimulatorExecutionRequirementProvider(),
   }), /release|requires a Scheduler/);
 });
+
+test('Stage-1 scheduler dependency failures are bounded WAITs, never escapes', async () => {
+  // evaluate throws
+  const throwing = runtime();
+  const acceptedThrowing = await throwing.prepare();
+  throwing.scheduler.evaluate = async () => { throw new Error('scheduler exploded'); };
+  const thrownOutcome = await throwing.relay.executeModelSummary(acceptedThrowing.job.envelope.job_id);
+  assert.equal(thrownOutcome.disposition, 'WAIT');
+  assert.equal(thrownOutcome.reason_code, 'START_REJECTED_DEPENDENCY');
+  assert.equal(thrownOutcome.job.current_state, 'ACCEPTED');
+
+  // reserve throws
+  const throwingReserve = runtime();
+  const acceptedReserve = await throwingReserve.prepare();
+  const originalReserve = throwingReserve.scheduler.reserve.bind(throwingReserve.scheduler);
+  throwingReserve.scheduler.reserve = (...args) => { throw new Error('reserve exploded'); };
+  void originalReserve;
+  const reserveOutcome = await throwingReserve.relay.executeModelSummary(acceptedReserve.job.envelope.job_id);
+  assert.equal(reserveOutcome.disposition, 'WAIT');
+  assert.equal(reserveOutcome.reason_code, 'START_REJECTED_DEPENDENCY');
+
+  // malformed evaluate response: ELIGIBLE without an evaluation object
+  const malformed = runtime();
+  const acceptedMalformed = await malformed.prepare();
+  malformed.scheduler.evaluate = async () => ({ disposition: 'ELIGIBLE' });
+  const malformedOutcome = await malformed.relay.executeModelSummary(acceptedMalformed.job.envelope.job_id);
+  assert.equal(malformedOutcome.disposition, 'WAIT');
+  assert.equal(malformedOutcome.reason_code, 'START_REJECTED_DEPENDENCY');
+
+  // malformed reserve response: RESERVED without a reservation object
+  const shapelessReserve = runtime();
+  const acceptedShapeless = await shapelessReserve.prepare();
+  shapelessReserve.scheduler.reserve = () => ({ disposition: 'RESERVED' });
+  const shapelessOutcome = await shapelessReserve.relay.executeModelSummary(acceptedShapeless.job.envelope.job_id);
+  assert.equal(shapelessOutcome.disposition, 'WAIT');
+  assert.equal(shapelessOutcome.reason_code, 'START_REJECTED_DEPENDENCY');
+
+  // entirely shapeless reserve response is also a dependency failure, not a
+  // fabricated capacity fact
+  const nullReserve = runtime();
+  const acceptedNull = await nullReserve.prepare();
+  nullReserve.scheduler.reserve = () => null;
+  const nullOutcome = await nullReserve.relay.executeModelSummary(acceptedNull.job.envelope.job_id);
+  assert.equal(nullOutcome.disposition, 'WAIT');
+  assert.equal(nullOutcome.reason_code, 'START_REJECTED_DEPENDENCY');
+});
+
+test('Stage-1 keeps valid scheduler decision classes instead of reinterpreting them', async () => {
+  // A valid authority DENY stays DENY with its own reason code.
+  const denied = runtime();
+  const acceptedDenied = await denied.prepare();
+  denied.scheduler.evaluate = async () => ({ disposition: 'DENY', evaluation: { reason_code: 'DENY_ENVIRONMENT' } });
+  const deniedOutcome = await denied.relay.executeModelSummary(acceptedDenied.job.envelope.job_id);
+  assert.equal(deniedOutcome.disposition, 'DENY');
+  assert.equal(deniedOutcome.reason_code, 'DENY_ENVIRONMENT');
+
+  // A valid non-capacity WAIT stays WAIT with its own reason code.
+  const waiting = runtime();
+  const acceptedWaiting = await waiting.prepare();
+  waiting.scheduler.evaluate = async () => ({ disposition: 'WAIT', evaluation: { reason_code: 'WAIT_DEPENDENCY' } });
+  const waitOutcome = await waiting.relay.executeModelSummary(acceptedWaiting.job.envelope.job_id);
+  assert.equal(waitOutcome.disposition, 'WAIT');
+  assert.equal(waitOutcome.reason_code, 'WAIT_DEPENDENCY');
+
+  // A well-formed non-reserved reserve response keeps capacity semantics.
+  const busy = runtime();
+  const acceptedBusy = await busy.prepare();
+  busy.scheduler.evaluate = async ({ job_id, requirement }) => {
+    const evaluated = await SchedulerService.prototype.evaluate.call(busy.scheduler, { job_id, requirement });
+    return evaluated;
+  };
+  busy.scheduler.reserve = () => ({ disposition: 'RESOURCE_BUSY', reason_code: 'WAIT_CAPACITY', reservation: null });
+  const busyOutcome = await busy.relay.executeModelSummary(acceptedBusy.job.envelope.job_id);
+  assert.equal(busyOutcome.disposition, 'WAIT');
+  assert.equal(busyOutcome.reason_code, 'WAIT_CAPACITY');
+});

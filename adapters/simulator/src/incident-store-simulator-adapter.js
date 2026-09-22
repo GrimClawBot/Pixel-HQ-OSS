@@ -1,5 +1,11 @@
 import { validateIncidentV1 } from '../../../packages/contracts/src/incident-v1.js';
 
+// Canonical operation-ID charset. #operationKey() composes delimiter-separated
+// keys and readOperation() matches by prefix, so an operation ID containing
+// delimiter material (":") could collide with or shadow another operation's
+// key. The bounded charset keeps every composed key unambiguous.
+const OPERATION_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
 function deepFreeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -50,7 +56,8 @@ export class SimulatorIncidentStoreAdapter {
     if (!validation.ok) {
       return { disposition: 'REJECTED', reason_code: 'RECORD_INVALID', record: null, errors: validation.errors };
     }
-    if (typeof operationId !== 'string' || operationId.length === 0 || operationId.length > 160) {
+    if (typeof operationId !== 'string' || operationId.length === 0 || operationId.length > 160
+      || !OPERATION_ID.test(operationId)) {
       return { disposition: 'REJECTED', reason_code: 'OPERATION_INVALID', record: null };
     }
     const key = this.#operationKey(operationId, id);

@@ -211,3 +211,26 @@ test('store refuses conflicting operation and non-cloneable boundary values', ()
   assert.equal(incident.createIncident(createInput({ source_ref: fn })).disposition, 'REJECTED');
   assert.equal(incident.transferCommand({ incident_id: fn }).disposition, 'REJECTED');
 });
+
+test('operation IDs never accept delimiter material that could shadow keys', () => {
+  const store = new SimulatorIncidentStoreAdapter();
+  const { incident } = serviceWithStore(store);
+  assert.equal(incident.createIncident(createInput()).disposition, 'RECORDED');
+  const record = incident.getIncident('incident-001');
+  // #operationKey() composes "<operationId>::incident::<id>" and readOperation()
+  // matches by prefix, so any ID carrying delimiter material could collide with
+  // or shadow another operation's committed key. The canonical charset rejects
+  // such IDs before any key is built.
+  for (const operationId of ['op-1::incident::incident-2', '::incident::incident-2', 'op-1:extra', 'op with space', '.dot-first']) {
+    const result = store.put('incident', record, { expectedRevision: record.revision, operationId });
+    assert.equal(result.disposition, 'REJECTED', operationId);
+    assert.equal(result.reason_code, 'OPERATION_INVALID', operationId);
+  }
+  // A crafted ID can never read back another operation's committed record.
+  assert.equal(store.readOperation('op-1'), null);
+  assert.equal(store.readOperation('op-1::incident::incident-2'), null);
+  // Valid existing operation IDs (alnum start, then alnum/._-) keep working.
+  const replayed = incident.createIncident(createInput());
+  assert.equal(replayed.disposition, 'RECORDED');
+  assert.equal(replayed.record.incident_id, 'incident-001');
+});

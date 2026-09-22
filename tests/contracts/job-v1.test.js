@@ -288,7 +288,9 @@ test('published schemas are strict at every declared object boundary', async () 
 });
 
 test('published lifecycle timestamps require canonical UTC ISO-8601 milliseconds', async () => {
-  const timestampPattern = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$';
+  // Canonical UTC millisecond syntax AND real calendar dates (leap-aware),
+  // matching the trusted-time runtime round-trip law.
+  const timestampPattern = '^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$';
   const schemas = [
     ['pixel-relay-job-envelope-v1.schema.json', 'created_at'],
     ['pixel-relay-job-transition-v1.schema.json', 'occurred_at'],
@@ -302,6 +304,7 @@ test('published lifecycle timestamps require canonical UTC ISO-8601 milliseconds
     assert.equal(timestamp.test(NOW), true, `${name} accepts canonical timestamp`);
     assert.equal(timestamp.test('2026-09-07T12:00:00Z'), false, `${name} rejects missing milliseconds`);
     assert.equal(timestamp.test('2026-09-07T08:00:00.000-04:00'), false, `${name} rejects offsets`);
+    assert.equal(timestamp.test('2026-02-30T12:00:00.000Z'), false, `${name} rejects impossible calendar dates`);
   }
 });
 

@@ -223,26 +223,64 @@ export class RelayService {
     } catch {
       return { admitted: false, reason_code: 'START_REJECTED_INPUT_INVALID', decision_class: 'DENY', evaluation: null, reservation: null };
     }
-    const evaluated = await this.#scheduler.evaluate({ job_id: job.envelope.job_id, requirement });
+    // Stage 1 scheduler reads are guarded exactly like the Stage 2
+    // confirmation: a throwing or malformed scheduler dependency is a bounded
+    // operational WAIT (START_REJECTED_DEPENDENCY), never an escape and never
+    // a reinterpretation of a valid DENY. Valid decisions keep their own
+    // classes: DENY stays DENY, WAIT/HOLD stays WAIT, capacity stays
+    // WAIT_CAPACITY. Relay owns lifecycle; the Scheduler never grants
+    // authority here, only eligibility and reservations.
+    let evaluated;
+    try {
+      evaluated = await this.#scheduler.evaluate({ job_id: job.envelope.job_id, requirement });
+    } catch {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation: null, reservation: null, requirement };
+    }
+    const evaluation = evaluated !== null && typeof evaluated === 'object' && evaluated.evaluation !== null && typeof evaluated.evaluation === 'object'
+      ? evaluated.evaluation
+      : null;
+    if (evaluated === null || typeof evaluated !== 'object' || typeof evaluated.disposition !== 'string'
+      || evaluation === null || typeof evaluation.reason_code !== 'string') {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation: null, reservation: null, requirement };
+    }
     if (evaluated.disposition !== 'ELIGIBLE') {
       return {
         admitted: false,
-        reason_code: evaluated.evaluation.reason_code,
+        reason_code: evaluation.reason_code,
         decision_class: evaluated.disposition,
-        evaluation: evaluated.evaluation,
+        evaluation,
         reservation: null,
         requirement,
       };
     }
-    const reserved = this.#scheduler.reserve({ evaluation: evaluated.evaluation, job_id: job.envelope.job_id });
-    if (reserved.disposition !== 'RESERVED') {
-      return { admitted: false, reason_code: 'WAIT_CAPACITY', decision_class: 'WAIT', evaluation: evaluated.evaluation, reservation: null, requirement };
+    let reserved;
+    try {
+      reserved = this.#scheduler.reserve({ evaluation, job_id: job.envelope.job_id });
+    } catch {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation, reservation: null, requirement };
+    }
+    if (reserved === null || typeof reserved !== 'object' || reserved.disposition !== 'RESERVED'
+      || reserved.reservation === null || typeof reserved.reservation !== 'object') {
+      // A well-formed non-reserved decision is a legitimate bounded outcome
+      // (capacity/eligibility WAIT); anything shapeless — including a claimed
+      // RESERVED without its reservation object — is a dependency failure,
+      // not a capacity fact.
+      const wellFormed = reserved !== null && typeof reserved === 'object'
+        && typeof reserved.disposition === 'string' && reserved.disposition !== 'RESERVED';
+      return {
+        admitted: false,
+        reason_code: wellFormed ? 'WAIT_CAPACITY' : 'START_REJECTED_DEPENDENCY',
+        decision_class: 'WAIT',
+        evaluation,
+        reservation: null,
+        requirement,
+      };
     }
     return {
       admitted: true,
       reason_code: null,
       decision_class: 'ELIGIBLE',
-      evaluation: evaluated.evaluation,
+      evaluation,
       reservation: reserved.reservation,
       requirement,
     };

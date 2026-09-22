@@ -26,7 +26,7 @@
   "$defs": {
     "identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }, "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "trace_id": { "type": "string", "pattern": "^(?!0{32}$)[0-9a-f]{32}$" }, "span_id": { "type": "string", "pattern": "^(?!0{16}$)[0-9a-f]{16}$" },
-    "timestamp": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }, "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$" }, "environment": { "enum": ["dev", "simulation", "shadow", "canary", "production"] },
     "placement": { "type": "object", "additionalProperties": false, "required": ["runtime_id", "model_id", "source"], "properties": { "runtime_id": { "$ref": "#/$defs/identifier" }, "model_id": { "$ref": "#/$defs/identifier" }, "source": { "enum": ["simulator", "live"] } } },
     "output": { "type": "object", "additionalProperties": false, "required": ["text", "hash", "token_units"], "properties": { "text": { "type": "string", "minLength": 1, "maxLength": 512 }, "hash": { "$ref": "#/$defs/hash" }, "token_units": { "type": "integer", "minimum": 1 } } }
   }

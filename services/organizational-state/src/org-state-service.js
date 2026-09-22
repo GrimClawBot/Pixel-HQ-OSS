@@ -626,7 +626,12 @@ export class OrganizationalStateService {
     let incidentSeamUnavailable = false;
     if (this.#incidents) {
       try {
-        const facts = this.#incidents.activeIncidentFacts();
+        // Snapshot before validation, exactly like the Calendar and Workforce
+        // seams: the validated values must be the values used for Company
+        // State and degraded-resource derivation, so a seam that exposes
+        // accessors or mutates after the call cannot pass validation and then
+        // supply different facts downstream.
+        const facts = snapshotSafePlainData(this.#incidents.activeIncidentFacts());
         let wellFormed = Array.isArray(facts);
         if (wellFormed) {
           for (let index = 0; index < facts.length; index += 1) {

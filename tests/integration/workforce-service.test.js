@@ -9,7 +9,7 @@ import { OrganizationalStateService } from '../../services/organizational-state/
 
 import {
   AGENT_ID, CAPABILITY, allowAllAuthorizer, authenticatingIntake, createClock,
-  denyAllAuthorizer, throwingAuthorizer, throwingIntake, unauthenticatedIntake,
+  denyAllAuthorizer, seedActiveWorkforce, throwingAuthorizer, throwingIntake, unauthenticatedIntake,
   workforceRuntime,
 } from '../helpers/px009-runtime.js';
 
@@ -640,4 +640,61 @@ test('no AgentOps API mutates lifecycle, qualification, or Access state', () => 
   assert.equal(r.workforce.getQualification(AGENT_ID, CAPABILITY).qualification_status, 'QUALIFIED');
   assert.equal(typeof r.workforce.quarantine, 'undefined');
   assert.equal(typeof r.workforce.grantAccess, 'undefined');
+});
+
+test('qualification uniqueness holds for revisioned updates at the adapter boundary', () => {
+  const r = workforceRuntime();
+  seedActiveWorkforce(r);
+  const seeded = r.workforceStore.get('qualification', `qualification-${AGENT_ID}`);
+  assert.equal(seeded.agent_id, AGENT_ID);
+
+  // A second current qualification on a different (agent, capability) pair,
+  // written directly at the adapter boundary.
+  const second = { ...structuredClone(seeded), qualification_id: 'qualification-second', agent_id: 'PIXEL-AGENTS-02', capability: 'pixel.other.read', revision: 1 };
+  const createdSecond = r.workforceStore.put('qualification', second, {
+    expectedRevision: null,
+    operationId: 'op-qual-second',
+    operationFingerprint: 'a'.repeat(64),
+  });
+  assert.equal(createdSecond.disposition, 'CREATED', JSON.stringify(createdSecond));
+
+  // A revisioned update that moves the second qualification onto the first
+  // record's canonical pair must reject instead of leaving two current
+  // records for one (agent_id, capability).
+  const moved = { ...second, agent_id: AGENT_ID, capability: CAPABILITY, revision: 2 };
+  const shadow = r.workforceStore.put('qualification', moved, {
+    expectedRevision: 1,
+    operationId: 'op-qual-move-shadow',
+    operationFingerprint: 'b'.repeat(64),
+  });
+  assert.equal(shadow.disposition, 'REJECTED');
+  assert.equal(shadow.reason_code, 'ALREADY_EXISTS');
+  assert.equal(shadow.record.qualification_id, `qualification-${AGENT_ID}`);
+  // The original holder is still the one and only current record for the pair.
+  assert.equal(r.workforceStore.qualificationFor(AGENT_ID, CAPABILITY).qualification_id, `qualification-${AGENT_ID}`);
+});
+
+test('a revisioned key-change release frees the old key for a future record', () => {
+  const r = workforceRuntime();
+  seedActiveWorkforce(r);
+  const seeded = r.workforceStore.get('qualification', `qualification-${AGENT_ID}`);
+
+  // Moving the record to a free pair is admitted and releases the old key.
+  const moved = { ...structuredClone(seeded), agent_id: 'PIXEL-AGENTS-03', revision: seeded.revision + 1 };
+  const movedResult = r.workforceStore.put('qualification', moved, {
+    expectedRevision: seeded.revision,
+    operationId: 'op-qual-move-free',
+    operationFingerprint: 'b'.repeat(64),
+  });
+  assert.equal(movedResult.disposition, 'UPDATED');
+
+  // The released old pair can now be claimed by a fresh create.
+  const fresh = { ...structuredClone(seeded), qualification_id: 'qualification-new-claim', revision: 1 };
+  const claim = r.workforceStore.put('qualification', fresh, {
+    expectedRevision: null,
+    operationId: 'op-qual-claim-released',
+    operationFingerprint: 'c'.repeat(64),
+  });
+  assert.equal(claim.disposition, 'CREATED', JSON.stringify(claim));
+  assert.equal(r.workforceStore.qualificationFor(AGENT_ID, CAPABILITY).qualification_id, 'qualification-new-claim');
 });

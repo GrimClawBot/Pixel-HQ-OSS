@@ -261,6 +261,10 @@ export function assessModelTraceCompleteness(records) {
   const errors = [];
   const traceId = records[0]?.trace_id;
   const spans = new Set();
+  // Canonical (non-rejection) spans are the only legal parents for rejection
+  // evidence: one refusal may never parent another refusal, or the causal
+  // chain to a real model attempt is lost while both stay outside `core`.
+  const canonicalSpans = new Set();
   for (const record of records) {
     const rule = RULES.get(record?.event_name);
     if (!rule) {
@@ -270,10 +274,11 @@ export function assessModelTraceCompleteness(records) {
     if (typeof record.trace_id !== 'string' || !TRACE_ID.test(record.trace_id) || record.trace_id !== traceId) errors.push('trace identifiers must be valid and equal');
     if (typeof record.span_id !== 'string' || !SPAN_ID.test(record.span_id) || spans.has(record.span_id)) errors.push('span identifiers must be valid and unique');
     spans.add(record.span_id);
+    if (record.event_name !== 'relay.transition.rejected') canonicalSpans.add(record.span_id);
     if (record.event_name === 'relay.transition.rejected'
       && (typeof record.parent_span_id !== 'string'
         || record.parent_span_id === record.span_id
-        || !spans.has(record.parent_span_id))) {
+        || !canonicalSpans.has(record.parent_span_id))) {
       errors.push('relay.transition.rejected is not parented to a preceding canonical model span');
     }
     if (record.service_name !== rule[0]) errors.push(`${record.event_name} has the wrong service owner`);

@@ -179,3 +179,74 @@ test('attributes must stay bounded', () => {
   long.attributes = { ...long.attributes, 'pixel.job.id': 'x'.repeat(200) };
   assert.equal(assessSchedulerTraceCompleteness([long]).complete, false);
 });
+
+test('scheduler evidence family binds to one job and one reservation', () => {
+  const evaluation = record();
+  const activated = record({
+    span_id: '2'.repeat(16), parent_span_id: SPAN,
+    event_name: 'scheduler.reservation.activated',
+    attributes: {
+      'pixel.job.id': 'job-001',
+      'pixel.scheduler.reservation_id': 'reservation-001',
+      'pixel.scheduler.resource_ref': 'simulation.exclusive.x',
+      'pixel.scheduler.revision': 1,
+    },
+  });
+  const confirmed = record({
+    span_id: '3'.repeat(16), parent_span_id: '2'.repeat(16),
+    event_name: 'scheduler.start.confirmed',
+    attributes: {
+      'pixel.job.id': 'job-001',
+      'pixel.scheduler.reason_code': 'START_CONFIRMED',
+      'pixel.scheduler.reservation_id': 'reservation-001',
+      'pixel.scheduler.job_revision': 2,
+    },
+  });
+  // The canonical family stays complete.
+  assert.equal(assessSchedulerTraceCompleteness([evaluation, activated, confirmed]).complete, true, 'happy path');
+
+  // A mixed-job family (evaluation for one job, activation for another) is not
+  // a proof of one scheduler attempt.
+  const foreignActivation = {
+    ...activated,
+    attributes: { ...activated.attributes, 'pixel.job.id': 'job-002' },
+  };
+  const mixedJobs = assessSchedulerTraceCompleteness([evaluation, foreignActivation, confirmed]);
+  assert.equal(mixedJobs.complete, false);
+  assert.equal(mixedJobs.errors.includes('scheduler evidence mixes multiple jobs'), true, JSON.stringify(mixedJobs.errors));
+
+  // Reservation ids must agree across activation, release, and start outcomes.
+  const mismatchedConfirmed = {
+    ...confirmed,
+    attributes: { ...confirmed.attributes, 'pixel.scheduler.reservation_id': 'reservation-002' },
+  };
+  const mixedReservations = assessSchedulerTraceCompleteness([evaluation, activated, mismatchedConfirmed]);
+  assert.equal(mixedReservations.complete, false);
+  assert.equal(mixedReservations.errors.includes('scheduler evidence references more than one reservation'), true, JSON.stringify(mixedReservations.errors));
+
+  const released = record({
+    span_id: '4'.repeat(16), parent_span_id: '2'.repeat(16),
+    event_name: 'scheduler.reservation.released',
+    attributes: {
+      'pixel.job.id': 'job-001',
+      'pixel.scheduler.reservation_id': 'reservation-009',
+      'pixel.scheduler.revision': 2,
+    },
+  });
+  const mismatchedRelease = assessSchedulerTraceCompleteness([evaluation, activated, confirmed, released]);
+  assert.equal(mismatchedRelease.complete, false);
+  assert.equal(mismatchedRelease.errors.includes('scheduler evidence references more than one reservation'), true, JSON.stringify(mismatchedRelease.errors));
+
+  // A start rejected for an unknown reservation (no activation in trace) keeps
+  // its legitimate path: the unknown reservation id cannot be cross-checked.
+  const unknown = record({
+    span_id: '5'.repeat(16), parent_span_id: SPAN,
+    event_name: 'scheduler.start.rejected', outcome: 'denied', severity: 'warning',
+    attributes: {
+      'pixel.job.id': 'job-001',
+      'pixel.scheduler.reason_code': 'START_REJECTED_RESERVATION',
+      'pixel.scheduler.reservation_id': 'reservation-does-not-exist',
+    },
+  });
+  assert.equal(assessSchedulerTraceCompleteness([evaluation, unknown]).complete, true, 'unknown-reservation rejection path');
+});
