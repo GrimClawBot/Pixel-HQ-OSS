@@ -44,3 +44,21 @@ test('routing uses only environment and has no fallback', () => {
     });
   }
 });
+
+test('prototype-chain keys are denied without routing or eligibility', () => {
+  for (const environment of ['constructor', 'toString', 'hasOwnProperty', '__proto__', 'valueOf']) {
+    assert.deepEqual(selectAlphaModelRoute(environment), {
+      decision: 'DENY', reason_code: 'ROUTE_UNSUPPORTED', policy_id: 'pixel.model-routing.alpha.v1',
+      placement: null, budget: null,
+    });
+  }
+
+  const exotic = Object.create(TUPLE);
+  exotic.filler_one = 1;
+  exotic.filler_two = 2;
+  exotic.filler_three = 3;
+  exotic.filler_four = 4;
+  assert.deepEqual(evaluateModelOperationEligibility({ operation: 'SYSTEM_STATUS_SUMMARY', execution: exotic }), {
+    decision: 'DENY', reason_code: 'OPERATION_INELIGIBLE', policy_id: 'pixel.model-operation.alpha.v1',
+  });
+});

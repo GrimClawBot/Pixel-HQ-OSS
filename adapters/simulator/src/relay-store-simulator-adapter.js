@@ -83,6 +83,7 @@ function projection(job) {
     model_invocation: job.modelInvocation,
     model_invocation_claimed: job.modelInvocationClaimed,
     result: job.result,
+    job_revision: job.revision,
   });
 }
 
@@ -131,6 +132,7 @@ export class SimulatorRelayStoreAdapter {
       modelInvocation: null,
       modelInvocationClaimed: false,
       result: null,
+      revision: 1,
     };
     this.#namespaces.set(namespace, envelope.job_id);
     this.#jobs.set(envelope.job_id, job);
@@ -139,6 +141,35 @@ export class SimulatorRelayStoreAdapter {
 
   getJob(jobId) {
     return projection(this.#jobs.get(jobId));
+  }
+
+  // Read-only canonical summaries; worker/tool/model payloads never enter this seam.
+  // Only the newest `limit` records are retained, so the store never maps or sorts
+  // the whole history: a single bounded pass instead of an N-log(N) sort.
+  recentWork(limit = 12) {
+    if (this.#jobs.size > 1_000_000) throw new RangeError('PROJECTION_BOUND_EXCEEDED');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 12) throw new RangeError('PROJECTION_BOUND_EXCEEDED');
+    const newest = [];
+    const comesFirst = (a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at)
+      || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    for (const job of this.#jobs.values()) {
+      const candidate = {
+        id: job.envelope.job_id,
+        title: job.envelope.job_type,
+        state: job.currentState,
+        role: job.envelope.owner.role_ref,
+        department: job.envelope.owner.department_ref,
+        occurred_at: job.envelope.created_at,
+        reason_code: job.transitions.at(-1)?.reason_code ?? 'JOB_SUBMITTED',
+      };
+      if (newest.length === limit && comesFirst(newest.at(-1), candidate) <= 0) continue;
+      let at = newest.length;
+      while (at > 0 && comesFirst(candidate, newest[at - 1]) < 0) at -= 1;
+      newest.splice(at, 0, candidate);
+      if (newest.length > limit) newest.pop();
+    }
+    const total = this.#jobs.size;
+    return frozenCopy({ items: newest, total_count: total, truncated: total > newest.length, order: 'newest' });
   }
 
   applyTransition(jobId, transition) {
@@ -165,6 +196,7 @@ export class SimulatorRelayStoreAdapter {
     }
     job.transitions.push(frozenCopy(transition));
     job.currentState = transition.to_state;
+    job.revision += 1;
     return { disposition: 'APPLIED', job: projection(job) };
   }
 
@@ -184,6 +216,7 @@ export class SimulatorRelayStoreAdapter {
 
     job.executionRequest = frozenCopy(request);
     job.gatewayDecision = frozenCopy(decision);
+    job.revision += 1;
     return { disposition: 'RECORDED', job: projection(job) };
   }
 
@@ -205,6 +238,7 @@ export class SimulatorRelayStoreAdapter {
 
     if (job.invocationClaimed) return { disposition: 'ALREADY_CLAIMED', job: projection(job) };
     job.invocationClaimed = true;
+    job.revision += 1;
     return { disposition: 'INVOKE_NOW', job: projection(job) };
   }
 
@@ -220,7 +254,28 @@ export class SimulatorRelayStoreAdapter {
 
     if (job.modelContextClaimed) return { disposition: 'ALREADY_CLAIMED', job: projection(job) };
     job.modelContextClaimed = true;
+    job.revision += 1;
     return { disposition: 'PREPARE_NOW', job: projection(job) };
+  }
+
+  // A rejected start must not permanently consume the single context-preparation
+  // attempt: Relay releases the claim (revision-guarded, only while the job is
+  // still ACCEPTED and no invocation exists) so the job can be retried after
+  // the blocking condition clears.
+  releaseModelContextPreparation(jobId, { expectedRevision = null } = {}) {
+    const job = this.#jobs.get(jobId);
+    if (
+      !job
+      || job.currentState !== 'ACCEPTED'
+      || !job.modelContextClaimed
+      || job.modelInvocation !== null
+      || job.gatewayDecision !== null
+      || (expectedRevision !== null && job.revision !== expectedRevision)
+    ) return { disposition: 'REJECTED', job: projection(job) };
+
+    job.modelContextClaimed = false;
+    job.revision += 1;
+    return { disposition: 'RELEASED', job: projection(job) };
   }
 
   claimModelInvocation(jobId, invocation) {
@@ -243,6 +298,7 @@ export class SimulatorRelayStoreAdapter {
     }
     job.modelInvocation = frozenCopy(invocation);
     job.modelInvocationClaimed = true;
+    job.revision += 1;
     return { disposition: 'INVOKE_NOW', job: projection(job) };
   }
 
@@ -287,6 +343,7 @@ export class SimulatorRelayStoreAdapter {
     job.transitions.push(frozenCopy(transition));
     job.result = frozenCopy(result);
     job.currentState = transition.to_state;
+    job.revision += 1;
     return { disposition: 'COMMITTED', job: projection(job) };
   }
 }

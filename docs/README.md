@@ -6,7 +6,7 @@ Start with the root [`README.md`](../README.md) for the 60-second demo, current 
 
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — public-safe system map and core invariants.
 - [`THREAT_MODEL.md`](../THREAT_MODEL.md) — trust boundaries, threat/control matrix, and Alpha security assumptions.
-- [`architecture/alpha-milestones.md`](architecture/alpha-milestones.md) — detailed summary of the completed public-safe PX-001 through PX-005 slices.
+- [`architecture/alpha-milestones.md`](architecture/alpha-milestones.md) — detailed summary of the completed public-safe PX-001 through PX-010 slices.
 - [`architecture/px-005-model-gateway-design.md`](architecture/px-005-model-gateway-design.md) — frozen simulator-first PX-005 ownership, contracts, routing, and security design.
 
 ## Try it
@@ -22,3 +22,5 @@ Start with the root [`README.md`](../README.md) for the 60-second demo, current 
 - [`SECURITY.md`](../SECURITY.md) — vulnerability-reporting and sensitive-contribution rules.
 
 Internal authority originals, private roadmaps, operational evidence, infrastructure details, and privileged security procedures are intentionally not part of the public source export.
+
+The current public Alpha covers PX-001 through PX-010, including the reviewed PX-005 hardening. PX-011+ is not public and is not implemented in this public Alpha; it reaches this repository only through separate, owner-gated public-sync revisions.

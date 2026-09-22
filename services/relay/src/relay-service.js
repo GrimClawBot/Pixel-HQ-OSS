@@ -33,6 +33,7 @@ import {
 } from '../../../packages/contracts/src/model-v1.js';
 import { tokenizeMemoryText } from '../../../packages/contracts/src/memory-v1.js';
 import { getSystemsJobBinding } from '../../../packages/registry/src/organization-bindings.js';
+import { decisionClassForConfirmation } from '../../../packages/contracts/src/scheduler-v1.js';
 import { evaluateModelOperationEligibility } from '../../policy/src/model-operation-policy.js';
 import { selectAlphaModelRoute } from '../../policy/src/model-routing-policy.js';
 
@@ -93,13 +94,25 @@ function sameRegistryBinding(context) {
     && context.worker_binding.role_ref === binding.role_ref;
 }
 
-function requireDependencies({ environment, contextProvider, store, toolGateway, memory, modelGateway, evidence, ids, clock }) {
+function requireDependencies({ environment, contextProvider, store, toolGateway, memory, modelGateway, scheduler, requirementProvider, evidence, ids, clock }) {
   if (!ENVIRONMENTS.has(environment)) throw new TypeError('Relay requires a canonical environment');
   assertJobContextProvider(contextProvider);
   assertRelayStoreAdapter(store);
   if (!toolGateway || typeof toolGateway.execute !== 'function') throw new TypeError('Relay requires ToolGateway');
   if ((memory === undefined) !== (modelGateway === undefined)) {
     throw new TypeError('Relay model execution requires both Memory and Model Gateway');
+  }
+  if (scheduler !== undefined && (typeof scheduler.evaluate !== 'function'
+    || typeof scheduler.confirmExecutionStart !== 'function' || typeof scheduler.reserve !== 'function'
+    || typeof scheduler.release !== 'function')) {
+    throw new TypeError('Relay start confirmation requires a Scheduler');
+  }
+  if (scheduler !== undefined && (!requirementProvider
+    || typeof requirementProvider.resolveExecutionRequirement !== 'function')) {
+    throw new TypeError('Relay start confirmation requires an execution requirement provider');
+  }
+  if (scheduler === undefined && requirementProvider !== undefined) {
+    throw new TypeError('Execution requirement provider requires a Scheduler');
   }
   if (memory !== undefined) {
     assertModelRelayStoreAdapter(store);
@@ -116,12 +129,14 @@ function requireDependencies({ environment, contextProvider, store, toolGateway,
     throw new TypeError('Relay requires job, execution, event, span, and trace ID sources');
   }
   if (typeof clock !== 'function') throw new TypeError('Relay requires a clock');
-  if ([contextProvider, store, toolGateway].some(({ source }) => source === 'simulator') && !SIMULATOR_ENVIRONMENTS.has(environment)) {
+  if ([contextProvider, store, toolGateway, memory, modelGateway, scheduler, requirementProvider].some((dependency) => (
+    dependency?.source === 'simulator'
+  )) && !SIMULATOR_ENVIRONMENTS.has(environment)) {
     throw new RangeError('Simulator Relay adapters may run only in dev or simulation');
   }
 }
-
 export class RelayService {
+  #activeReservations = new Map();
   #clock;
   #contextProvider;
   #contextSource;
@@ -130,11 +145,13 @@ export class RelayService {
   #ids;
   #memory;
   #modelGateway;
+  #requirementProvider;
+  #scheduler;
   #store;
   #toolGateway;
 
-  constructor({ environment, contextProvider, store, toolGateway, memory, modelGateway, evidence, ids, clock }) {
-    requireDependencies({ environment, contextProvider, store, toolGateway, memory, modelGateway, evidence, ids, clock });
+  constructor({ environment, contextProvider, store, toolGateway, memory, modelGateway, scheduler, requirementProvider, evidence, ids, clock }) {
+    requireDependencies({ environment, contextProvider, store, toolGateway, memory, modelGateway, scheduler, requirementProvider, evidence, ids, clock });
     this.#environment = environment;
     this.#contextProvider = contextProvider;
     this.#contextSource = contextProvider.source;
@@ -142,6 +159,8 @@ export class RelayService {
     this.#toolGateway = toolGateway;
     this.#memory = memory;
     this.#modelGateway = modelGateway;
+    this.#scheduler = scheduler;
+    this.#requirementProvider = requirementProvider;
     this.#evidence = evidence;
     this.#ids = ids;
     this.#clock = clock;
@@ -188,6 +207,180 @@ export class RelayService {
         'pixel.job.reason_code': TRANSITION_REASONS.has(reasonCode) ? reasonCode : 'UNKNOWN',
       },
     });
+  }
+
+  // PX-006 two-stage start safety. When a Scheduler is wired, Relay may only
+  // transition ACCEPTED -> RUNNING after evaluate -> reserve (Stage 1) and a
+  // fresh re-check (Stage 2) succeed against canonical state. WAIT/HOLD/DENY
+  // leave the job ACCEPTED; they never become Relay lifecycle states.
+  async #schedulerAdmit(job) {
+    if (!this.#scheduler) {
+      return { admitted: true, reason_code: null, decision_class: null, evaluation: null, reservation: null };
+    }
+    let requirement;
+    try {
+      ({ requirement } = this.#requirementProvider.resolveExecutionRequirement({ job }));
+    } catch {
+      return { admitted: false, reason_code: 'START_REJECTED_INPUT_INVALID', decision_class: 'DENY', evaluation: null, reservation: null };
+    }
+    // Stage 1 scheduler reads are guarded exactly like the Stage 2
+    // confirmation: a throwing or malformed scheduler dependency is a bounded
+    // operational WAIT (START_REJECTED_DEPENDENCY), never an escape and never
+    // a reinterpretation of a valid DENY. Valid decisions keep their own
+    // classes: DENY stays DENY, WAIT/HOLD stays WAIT, capacity stays
+    // WAIT_CAPACITY. Relay owns lifecycle; the Scheduler never grants
+    // authority here, only eligibility and reservations.
+    let evaluated;
+    try {
+      evaluated = await this.#scheduler.evaluate({ job_id: job.envelope.job_id, requirement });
+    } catch {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation: null, reservation: null, requirement };
+    }
+    const evaluation = evaluated !== null && typeof evaluated === 'object' && evaluated.evaluation !== null && typeof evaluated.evaluation === 'object'
+      ? evaluated.evaluation
+      : null;
+    if (evaluated === null || typeof evaluated !== 'object' || typeof evaluated.disposition !== 'string'
+      || evaluation === null || typeof evaluation.reason_code !== 'string') {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation: null, reservation: null, requirement };
+    }
+    if (evaluated.disposition !== 'ELIGIBLE') {
+      return {
+        admitted: false,
+        reason_code: evaluation.reason_code,
+        decision_class: evaluated.disposition,
+        evaluation,
+        reservation: null,
+        requirement,
+      };
+    }
+    let reserved;
+    try {
+      reserved = this.#scheduler.reserve({ evaluation, job_id: job.envelope.job_id });
+    } catch {
+      return { admitted: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT', evaluation, reservation: null, requirement };
+    }
+    if (reserved === null || typeof reserved !== 'object' || reserved.disposition !== 'RESERVED'
+      || reserved.reservation === null || typeof reserved.reservation !== 'object') {
+      // A well-formed non-reserved decision is a legitimate bounded outcome
+      // (capacity/eligibility WAIT); anything shapeless — including a claimed
+      // RESERVED without its reservation object — is a dependency failure,
+      // not a capacity fact.
+      const wellFormed = reserved !== null && typeof reserved === 'object'
+        && typeof reserved.disposition === 'string' && reserved.disposition !== 'RESERVED';
+      return {
+        admitted: false,
+        reason_code: wellFormed ? 'WAIT_CAPACITY' : 'START_REJECTED_DEPENDENCY',
+        decision_class: 'WAIT',
+        evaluation,
+        reservation: null,
+        requirement,
+      };
+    }
+    return {
+      admitted: true,
+      reason_code: null,
+      decision_class: 'ELIGIBLE',
+      evaluation,
+      reservation: reserved.reservation,
+      requirement,
+    };
+  }
+
+  // Stage 2 — the fresh re-check immediately before ACCEPTED -> RUNNING.
+  // Any rejection also releases the tracked reservation and (when the caller
+  // supplied one) the consumed model-context claim, so a rejected start can be
+  // retried after the blocking condition clears instead of wedging the job.
+  async #schedulerConfirm(job, admission, { onReject = null } = {}) {
+    if (!this.#scheduler || admission?.admitted !== true || !admission.reservation) {
+      return { confirmed: true, reason_code: null, decision_class: null };
+    }
+    const fresh = await this.#store.getJob(job.envelope.job_id);
+    if (!fresh || fresh.current_state !== 'ACCEPTED') {
+      this.#releaseReservation(admission.reservation);
+      if (onReject) await onReject();
+      return { confirmed: false, reason_code: 'START_REJECTED_JOB_STATE', decision_class: 'DENY' };
+    }
+    let confirmation;
+    try {
+      confirmation = await this.#scheduler.confirmExecutionStart({
+        job_id: job.envelope.job_id,
+        requirement: admission.requirement,
+        reservation_id: admission.reservation.reservation_id,
+        expected_job_revision: fresh.job_revision,
+      });
+    } catch {
+      // A scheduler dependency failure rejects start (the job stays ACCEPTED)
+      // and must not leak the tracked reservation or the context claim.
+      this.#releaseReservation(admission.reservation);
+      if (onReject) await onReject();
+      return { confirmed: false, reason_code: 'START_REJECTED_DEPENDENCY', decision_class: 'WAIT' };
+    }
+    if (!confirmation.confirmed) {
+      this.#releaseReservation(admission.reservation);
+      if (onReject) await onReject();
+      return {
+        confirmed: false,
+        reason_code: confirmation.reason_code,
+        decision_class: decisionClassForConfirmation(confirmation.reason_code) ?? 'WAIT',
+      };
+    }
+    return { confirmed: true, reason_code: confirmation.reason_code, decision_class: 'ELIGIBLE' };
+  }
+
+  #releaseReservation(reservation) {
+    if (!this.#scheduler || !reservation) return;
+    try {
+      this.#scheduler.release({
+        reservation_id: reservation.reservation_id,
+        expected_revision: reservation.revision,
+      });
+    } catch {
+      // Reservation cleanup is best-effort; the lease expires safely regardless.
+    }
+  }
+
+  #trackReservation(jobId, reservation) {
+    if (!reservation) return;
+    this.#activeReservations.set(jobId, reservation);
+  }
+
+  // A non-terminal model attempt that cannot continue must not leave state
+  // behind: the consumed context claim is released (when the job is still
+  // ACCEPTED), the approved package is released with it, and the tracked
+  // reservation is always released so capacity is never leaked. The adapter
+  // contract permits a Promise from releaseModelContextPreparation, so the
+  // release is awaited: the disposition is observed and a rejected promise is
+  // contained by the best-effort catch instead of escaping cleanup.
+  async #releaseModelAttempt(jobId) {
+    try {
+      const released = await this.#store.releaseModelContextPreparation(jobId);
+      if (released?.disposition === 'RELEASED') this.#releaseApprovedPackages(jobId);
+    } catch {
+      // Best effort: a failed claim release leaves the claim as-is.
+    }
+    this.#releaseTrackedReservation(jobId);
+  }
+
+  // Execution completion (or committed terminal failure) releases capacity
+  // according to bounded rules; the lease would also expire safely on its own.
+  #releaseTrackedReservation(jobId) {
+    const reservation = this.#activeReservations.get(jobId);
+    if (!reservation) return;
+    this.#activeReservations.delete(jobId);
+    this.#releaseReservation(reservation);
+  }
+
+  // Issue #71: Relay terminal truth governs approved-package cleanup. Relay is
+  // the lifecycle authority, so it alone triggers release after a committed
+  // terminal result; Memory only executes the bounded release. Cleanup failure
+  // is contained (the terminal commit stands) and never retries inference.
+  #releaseApprovedPackages(jobId) {
+    if (!this.#memory || typeof this.#memory.releasePackageForJob !== 'function') return;
+    try {
+      this.#memory.releasePackageForJob(jobId);
+    } catch {
+      // Cleanup failure must not corrupt the committed terminal state.
+    }
   }
 
   async accept(intent) {
@@ -355,6 +548,29 @@ export class RelayService {
       return frozenCopy({ disposition: 'INVALID_STATE', job, trace_id: job?.envelope.trace_id ?? null });
     }
 
+    // Stage 1 — eligibility + capacity reservation before any execution work.
+    const admission = await this.#schedulerAdmit(job);
+    if (!admission.admitted) {
+      return frozenCopy({
+        disposition: admission.decision_class ?? 'WAIT',
+        reason_code: admission.reason_code,
+        job: await this.#store.getJob(jobId),
+        trace_id: job.envelope.trace_id,
+      });
+    }
+
+    // Stage 2 — fresh re-check immediately before ACCEPTED -> RUNNING.
+    const gate = await this.#schedulerConfirm(job, admission);
+    if (!gate.confirmed) {
+      return frozenCopy({
+        disposition: gate.decision_class ?? 'WAIT',
+        reason_code: gate.reason_code,
+        job: await this.#store.getJob(jobId),
+        trace_id: job.envelope.trace_id,
+      });
+    }
+    this.#trackReservation(jobId, admission.reservation);
+
     const executionId = this.#ids.nextExecutionId();
     const runningSpanId = this.#ids.nextSpanId();
     const running = assertValidJobTransitionV1(frozenCopy({
@@ -375,6 +591,7 @@ export class RelayService {
     const applied = await this.#store.applyTransition(jobId, running);
     if (applied.disposition !== 'APPLIED') {
       if (applied.job) this.#recordTransitionRejection(applied.job, 'RUNNING', 'EXECUTION_STARTED');
+      this.#releaseTrackedReservation(jobId);
       return frozenCopy({ disposition: 'INVALID_STATE', job: applied.job, trace_id: job.envelope.trace_id });
     }
     this.#append({
@@ -424,8 +641,13 @@ export class RelayService {
 
     try {
       const result = await this.#toolGateway.execute({ executionRequest, parentSpanId: requestSpanId });
+      if (['COMPLETED', 'FAILED'].includes(result.disposition)) {
+        this.#releaseTrackedReservation(jobId);
+        this.#releaseApprovedPackages(jobId);
+      }
       return frozenCopy({ ...result, trace_id: job.envelope.trace_id });
     } catch {
+      this.#releaseTrackedReservation(jobId);
       return frozenCopy({
         disposition: 'UNAVAILABLE',
         job: await this.#store.getJob(jobId),
@@ -546,11 +768,19 @@ export class RelayService {
     });
     const committed = await this.#store.commitTerminalResult(invocation.job_id, transition, result);
     if (committed.disposition !== 'COMMITTED') {
+      // The terminal commit did not land; release capacity but keep the
+      // package (the job may still be recoverable — release is reserved for
+      // canonical terminal truth).
+      this.#releaseTrackedReservation(invocation.job_id);
       return frozenCopy({
         disposition: 'UNAVAILABLE', job: await this.#store.getJob(invocation.job_id),
         model_output: null, trace_id: invocation.trace_id,
       });
     }
+    // Issue #71: the terminal result is canonical now; approved-package cleanup
+    // may proceed safely because Relay has declared the job finished.
+    this.#releaseApprovedPackages(invocation.job_id);
+    this.#releaseTrackedReservation(invocation.job_id);
     this.#append({
       traceId: invocation.trace_id, spanId: resultSpanId, parentSpanId: validationSpanId,
       eventName: 'job.result.projected', outcome: state === 'COMPLETED' ? 'success' : 'failure',
@@ -586,8 +816,21 @@ export class RelayService {
       return frozenCopy({ disposition: 'INVALID_STATE', job, model_output: null, trace_id: job?.envelope.trace_id ?? null });
     }
 
+    // Stage 1 — eligibility + capacity reservation before claim/context work.
+    const admission = await this.#schedulerAdmit(job);
+    if (!admission.admitted) {
+      return frozenCopy({
+        disposition: admission.decision_class ?? 'WAIT',
+        reason_code: admission.reason_code,
+        job: await this.#store.getJob(jobId),
+        model_output: null,
+        trace_id: job.envelope.trace_id,
+      });
+    }
+
     const preparation = await this.#store.claimModelContextPreparation(jobId);
     if (preparation.disposition !== 'PREPARE_NOW') {
+      if (admission.reservation) this.#releaseReservation(admission.reservation);
       return frozenCopy({
         disposition: preparation.disposition === 'ALREADY_CLAIMED' ? 'INVALID_STATE' : 'UNAVAILABLE',
         job: preparation.job,
@@ -600,11 +843,31 @@ export class RelayService {
     try {
       context = await this.#memory.buildContext({ job_id: jobId, query: 'system status' });
     } catch {
+      if (admission.reservation) this.#releaseReservation(admission.reservation);
       return frozenCopy({ disposition: 'UNAVAILABLE', job: await this.#store.getJob(jobId), model_output: null, trace_id: job.envelope.trace_id });
     }
     if (context?.disposition !== 'CREATED' || !context.package) {
+      if (admission.reservation) this.#releaseReservation(admission.reservation);
       return frozenCopy({ disposition: 'UNAVAILABLE', job: await this.#store.getJob(jobId), model_output: null, trace_id: job.envelope.trace_id });
     }
+
+    // Stage 2 — fresh re-check immediately before ACCEPTED -> RUNNING. If it
+    // fails, the claimed context is not executed; the job stays ACCEPTED and
+    // the consumed context claim is released so the job can be retried once
+    // the blocking condition clears (no permanent wedge).
+    const gate = await this.#schedulerConfirm(job, admission, {
+      onReject: () => this.#releaseModelAttempt(jobId),
+    });
+    if (!gate.confirmed) {
+      return frozenCopy({
+        disposition: gate.decision_class ?? 'WAIT',
+        reason_code: gate.reason_code,
+        job: await this.#store.getJob(jobId),
+        model_output: null,
+        trace_id: job.envelope.trace_id,
+      });
+    }
+    this.#trackReservation(jobId, admission.reservation);
 
     const executionId = this.#ids.nextExecutionId();
     const runningSpanId = this.#ids.nextSpanId();
@@ -618,6 +881,7 @@ export class RelayService {
     const applied = await this.#store.applyTransition(jobId, running);
     if (applied.disposition !== 'APPLIED') {
       if (applied.job) this.#recordTransitionRejection(applied.job, 'RUNNING', 'EXECUTION_STARTED');
+      await this.#releaseModelAttempt(jobId);
       return frozenCopy({ disposition: 'INVALID_STATE', job: applied.job, model_output: null, trace_id: job.envelope.trace_id });
     }
     this.#append({
@@ -679,6 +943,7 @@ export class RelayService {
     });
     const claim = await this.#store.claimModelInvocation(jobId, invocation);
     if (claim.disposition !== 'INVOKE_NOW') {
+      this.#releaseTrackedReservation(jobId);
       return frozenCopy({ disposition: 'UNAVAILABLE', job: claim.job, model_output: null, trace_id: invocation.trace_id });
     }
     const claimedSpanId = this.#ids.nextSpanId();
@@ -773,7 +1038,27 @@ export class RelayService {
     return frozenCopy({ disposition: 'INVALID_STATE', job: rejected.job, trace_id: job.envelope.trace_id });
   }
 
+  async recentWork() {
+    if (typeof this.#store.recentWork !== 'function') return null;
+    return { source: this.#store.source, environment: this.#environment, data: await this.#store.recentWork() };
+  }
+
   async getJob(jobId) {
     return this.#store.getJob(jobId);
+  }
+
+  // Maintenance entry point for Issue #71: bound abandoned (non-terminal)
+  // approved packages. Relay is the lifecycle authority, so the maintenance
+  // sweep is exposed here; it only releases packages whose job is no longer
+  // resolvable and never touches an in-flight package.
+  async boundApprovedPackageRetention({ maximum = 64 } = {}) {
+    if (!this.#memory || typeof this.#memory.boundRetention !== 'function') {
+      return frozenCopy({ disposition: 'UNAVAILABLE', reason_code: 'RETENTION_UNAVAILABLE', released: [] });
+    }
+    try {
+      return await this.#memory.boundRetention({ maximum });
+    } catch {
+      return frozenCopy({ disposition: 'UNAVAILABLE', reason_code: 'RETENTION_FAILED', released: [] });
+    }
   }
 }

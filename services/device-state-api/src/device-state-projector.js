@@ -76,6 +76,7 @@ export class DeviceStateProjector {
       },
       trace_id: event.trace_id,
       source: event.source,
+      environment: event.environment,
       provenance: {
         adapter_contract: event.provenance.adapter_contract,
         adapter_id: event.provenance.adapter_id,

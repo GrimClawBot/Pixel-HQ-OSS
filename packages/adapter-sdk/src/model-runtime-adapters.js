@@ -34,8 +34,9 @@ function visitPlainData(value, ancestors, state, depth) {
   }
   ancestors.add(value);
   const keys = Reflect.ownKeys(value);
-  state.keys += keys.length;
-  if (keys.length > SAFE_DATA_MAX_KEYS_PER_OBJECT || state.keys > SAFE_DATA_MAX_KEYS) {
+  const keyCount = Array.isArray(value) ? keys.length - 1 : keys.length;
+  state.keys += keyCount;
+  if (keyCount > SAFE_DATA_MAX_KEYS_PER_OBJECT || state.keys > SAFE_DATA_MAX_KEYS) {
     throw new TypeError('Adapter data must be safe plain data');
   }
   if (Array.isArray(value)) {
@@ -53,7 +54,7 @@ function visitPlainData(value, ancestors, state, depth) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor) throw new TypeError('Adapter data must be safe plain data');
     if ('get' in descriptor || 'set' in descriptor) throw new TypeError('Adapter data must be safe plain data');
-    if (key !== 'length') visitPlainData(descriptor.value, ancestors, state, depth + 1);
+    if (!(Array.isArray(value) && key === 'length')) visitPlainData(descriptor.value, ancestors, state, depth + 1);
   }
   ancestors.delete(value);
 }

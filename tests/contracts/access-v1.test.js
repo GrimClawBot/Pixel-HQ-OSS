@@ -242,7 +242,7 @@ test('published access schemas encode the runtime cross-field invariants', () =>
   const requestJson = JSON.stringify(requestSchema);
   const decisionJson = JSON.stringify(decisionSchema);
   const identifierPattern = '^[A-Za-z0-9][A-Za-z0-9._:-]*$';
-  const timestampPattern = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$';
+  const timestampPattern = '^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$';
 
   assert.equal(requestSchema.properties.request_id.pattern, identifierPattern);
   assert.equal(requestSchema.properties.occurred_at.pattern, timestampPattern);

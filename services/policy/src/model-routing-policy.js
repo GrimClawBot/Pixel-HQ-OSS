@@ -31,7 +31,7 @@ const ROUTES = Object.freeze({
 });
 
 export function selectAlphaModelRoute(environment) {
-  const route = ROUTES[environment];
+  const route = Object.hasOwn(ROUTES, environment) ? ROUTES[environment] : undefined;
   if (!route) {
     return Object.freeze({
       decision: 'DENY', reason_code: 'ROUTE_UNSUPPORTED', policy_id: MODEL_ROUTING_POLICY_ID,

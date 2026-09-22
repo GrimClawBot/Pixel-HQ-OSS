@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-agentops-evaluation-v1.schema.json",
+  "title": "Pixel AgentOps Evaluation v1",
+  "required": [
+    "evaluation_id",
+    "event_name",
+    "schema_version",
+    "agent_id",
+    "evaluation_state",
+    "window_start",
+    "window_end",
+    "reason_codes",
+    "evidence_refs",
+    "attribution_refs",
+    "recommendations",
+    "generated_at",
+    "revision_token",
+    "provenance"
+  ],
+  "properties": {
+    "evaluation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.agentops-evaluation.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "evaluation_state": {
+      "enum": [
+        "NORMAL",
+        "WATCH",
+        "REVIEW"
+      ]
+    },
+    "window_start": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "window_end": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "maxLength": 160
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "maxLength": 160
+      }
+    },
+    "attribution_refs": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "maxLength": 160
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "NO_ACTION",
+          "REVIEW_RUNTIME",
+          "REVIEW_CONTEXT",
+          "REVIEW_TOOL",
+          "REVIEW_PROCESS",
+          "REQUEST_TRAINING_REVIEW",
+          "REQUEST_WORKFORCE_REVIEW"
+        ]
+      }
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "revision_token": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workforce_contract"
+      ],
+      "properties": {
+        "workforce_contract": {
+          "const": "pixel.workforce.v1"
+        }
+      }
+    }
+  }
+}

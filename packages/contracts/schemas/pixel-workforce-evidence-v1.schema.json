@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-workforce-evidence-v1.schema.json",
+  "title": "Pixel Workforce Evidence v1",
+  "required": [
+    "evidence_id",
+    "event_name",
+    "schema_version",
+    "agent_id",
+    "subject_ref",
+    "dimension",
+    "observation",
+    "source_ref",
+    "attribution_ref",
+    "authority",
+    "observed_at",
+    "provenance"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.workforce-evidence.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "subject_ref": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dimension": {
+      "enum": [
+        "QUALITY",
+        "RELIABILITY",
+        "POLICY_COMPLIANCE",
+        "EVIDENCE_QUALITY",
+        "JUDGMENT",
+        "COLLABORATION",
+        "EFFICIENCY"
+      ]
+    },
+    "observation": {
+      "enum": [
+        "POSITIVE",
+        "ACCEPTABLE",
+        "CONCERN",
+        "FAIL"
+      ]
+    },
+    "source_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "attribution_ref": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authority": {
+      "enum": [
+        "AUTHENTICATED",
+        "SELF_REPORT"
+      ]
+    },
+    "observed_at": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workforce_contract"
+      ],
+      "properties": {
+        "workforce_contract": {
+          "const": "pixel.workforce.v1"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "authority": {
+            "const": "SELF_REPORT"
+          }
+        },
+        "required": [
+          "authority"
+        ]
+      },
+      "then": {
+        "properties": {
+          "observation": {
+            "enum": [
+              "POSITIVE",
+              "ACCEPTABLE",
+              "CONCERN"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

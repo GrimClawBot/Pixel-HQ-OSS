@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pixel-hq.local/schemas/pixel-scheduler-eligibility-v1.schema.json",
+  "title": "Pixel Scheduler Eligibility v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eligibility_id",
+    "event_name",
+    "schema_version",
+    "evaluated_at",
+    "job_id",
+    "execution_id",
+    "environment",
+    "decision",
+    "reason_code",
+    "policy_id",
+    "authority_state",
+    "approval_id",
+    "delegation_id",
+    "hold_id",
+    "company_state",
+    "duty",
+    "capacity",
+    "resource_ref",
+    "job_revision",
+    "provenance"
+  ],
+  "properties": {
+    "eligibility_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.scheduler.eligibility.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "execution_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "decision": {
+      "enum": [
+        "ELIGIBLE",
+        "WAIT",
+        "HOLD",
+        "DENY"
+      ]
+    },
+    "reason_code": {
+      "enum": [
+        "ELIGIBLE_NOW",
+        "WAIT_DEPENDENCY",
+        "WAIT_CAPACITY",
+        "WAIT_OFF_DUTY",
+        "WAIT_MAINTENANCE",
+        "WAIT_HOLIDAY",
+        "WAIT_NIGHT",
+        "WAIT_QUALIFICATION",
+        "WAIT_APPROVAL",
+        "WAIT_NOT_BEFORE",
+        "HOLD_SECURITY",
+        "HOLD_POLICY",
+        "HOLD_OWNER",
+        "HOLD_MAINTENANCE",
+        "DENY_AUTHORITY_MISSING",
+        "DENY_DELEGATION_INVALID",
+        "DENY_ENVIRONMENT",
+        "DENY_RESOURCE_INELIGIBLE",
+        "DENY_COMPANY_STATE",
+        "DENY_WORKFORCE",
+        "DENY_INPUT_INVALID"
+      ]
+    },
+    "policy_id": {
+      "const": "pixel.scheduler.alpha.v1"
+    },
+    "authority_state": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "approval_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "delegation_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hold_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "company_state": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "duty": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "capacity": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resource_ref": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "maxLength": 160
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "job_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheduler_contract"
+      ],
+      "properties": {
+        "scheduler_contract": {
+          "const": "pixel.scheduler.v1"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "ELIGIBLE"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "ELIGIBLE_NOW"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "WAIT"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "WAIT_DEPENDENCY",
+              "WAIT_CAPACITY",
+              "WAIT_OFF_DUTY",
+              "WAIT_MAINTENANCE",
+              "WAIT_HOLIDAY",
+              "WAIT_NIGHT",
+        "WAIT_QUALIFICATION",
+              "WAIT_APPROVAL",
+              "WAIT_NOT_BEFORE"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "HOLD"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "HOLD_SECURITY",
+              "HOLD_POLICY",
+              "HOLD_OWNER",
+              "HOLD_MAINTENANCE"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "DENY"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "DENY_AUTHORITY_MISSING",
+              "DENY_DELEGATION_INVALID",
+              "DENY_ENVIRONMENT",
+              "DENY_RESOURCE_INELIGIBLE",
+              "DENY_COMPANY_STATE",
+        "DENY_WORKFORCE",
+              "DENY_INPUT_INVALID"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "HOLD"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "hold_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "hold_id"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "ELIGIBLE"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "hold_id": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

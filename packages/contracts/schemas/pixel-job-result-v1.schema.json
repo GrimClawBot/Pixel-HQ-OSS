@@ -9,7 +9,7 @@
     "result_id": { "$ref": "#/$defs/identifier" },
     "event_name": { "const": "pixel.job.result.v1" },
     "schema_version": { "const": "1.0.0" },
-    "completed_at": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "completed_at": { "type": "string", "format": "date-time", "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$" },
     "environment": { "$ref": "#/$defs/environment" },
     "trace_id": { "$ref": "#/$defs/trace_id" },
     "span_id": { "$ref": "#/$defs/span_id" },
@@ -34,6 +34,20 @@
       "if": { "properties": { "outcome_code": { "enum": ["CAPABILITY_DENIED", "AUTHORIZATION_UNAVAILABLE"] } } },
       "then": { "properties": { "provenance": { "$ref": "#/$defs/denied_worker_provenance" } } },
       "else": { "properties": { "provenance": { "oneOf": [{ "$ref": "#/$defs/executed_worker_provenance" }, { "$ref": "#/$defs/model_provenance" }] } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": { "const": "COMPLETED" },
+          "provenance": { "required": ["model_gateway_contract"] }
+        },
+        "required": ["state", "provenance"]
+      },
+      "then": {
+        "properties": {
+          "provenance": { "$ref": "#/$defs/completed_model_provenance" }
+        }
+      }
     }
   ],
   "$defs": {
@@ -59,6 +73,18 @@
         { "properties": { "model_runtime_id": { "$ref": "#/$defs/identifier" }, "model_id": { "$ref": "#/$defs/identifier" }, "model_source": { "const": "simulator" } } },
         { "properties": { "model_runtime_id": { "type": "null" }, "model_id": { "type": "null" }, "model_source": { "type": "null" } } }
       ]
+    },
+    "completed_model_provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["relay_contract", "model_gateway_contract", "model_invocation_id", "model_runtime_id", "model_id", "model_source"],
+      "properties": {
+        "relay_contract": { "const": "pixel.relay.v1" },
+        "model_gateway_contract": { "const": "pixel.model-gateway.v1" },
+        "model_invocation_id": { "$ref": "#/$defs/identifier" },
+        "model_runtime_id": { "$ref": "#/$defs/identifier" },
+        "model_id": { "$ref": "#/$defs/identifier" },
+        "model_source": { "const": "simulator" }
+      }
     }
   }
 }

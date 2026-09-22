@@ -79,6 +79,9 @@ const RULES = new Map([
   ['relay.job.failed', ['pixel.relay', [
     'pixel.job.id', 'pixel.job.from_state', 'pixel.job.to_state', 'pixel.job.reason_code',
   ]]],
+  ['relay.transition.rejected', ['pixel.relay', [
+    'pixel.job.id', 'pixel.job.current_state', 'pixel.job.attempted_state', 'pixel.job.reason_code',
+  ]]],
 ]);
 
 const PREFIX = [
@@ -127,6 +130,8 @@ function expectedSignal(record) {
     case 'model.gateway.outcome_rejected':
     case 'relay.job.failed':
       return ['failure', 'warning'];
+    case 'relay.transition.rejected':
+      return ['denied', 'warning'];
     case 'job.result.projected':
       return value('pixel.job.outcome_code') === 'SYSTEM_STATUS_AVAILABLE'
         ? ['success', 'info'] : ['failure', 'warning'];
@@ -250,9 +255,16 @@ export function assessModelTraceCompleteness(records) {
   if (!Array.isArray(records) || records.length === 0) {
     return assessment(['job.submission.received'], ['trace has no evidence']);
   }
+  if (records.some((record) => record === null || typeof record !== 'object')) {
+    return assessment([], ['trace contains malformed model evidence records']);
+  }
   const errors = [];
   const traceId = records[0]?.trace_id;
   const spans = new Set();
+  // Canonical (non-rejection) spans are the only legal parents for rejection
+  // evidence: one refusal may never parent another refusal, or the causal
+  // chain to a real model attempt is lost while both stay outside `core`.
+  const canonicalSpans = new Set();
   for (const record of records) {
     const rule = RULES.get(record?.event_name);
     if (!rule) {
@@ -262,6 +274,13 @@ export function assessModelTraceCompleteness(records) {
     if (typeof record.trace_id !== 'string' || !TRACE_ID.test(record.trace_id) || record.trace_id !== traceId) errors.push('trace identifiers must be valid and equal');
     if (typeof record.span_id !== 'string' || !SPAN_ID.test(record.span_id) || spans.has(record.span_id)) errors.push('span identifiers must be valid and unique');
     spans.add(record.span_id);
+    if (record.event_name !== 'relay.transition.rejected') canonicalSpans.add(record.span_id);
+    if (record.event_name === 'relay.transition.rejected'
+      && (typeof record.parent_span_id !== 'string'
+        || record.parent_span_id === record.span_id
+        || !canonicalSpans.has(record.parent_span_id))) {
+      errors.push('relay.transition.rejected is not parented to a preceding canonical model span');
+    }
     if (record.service_name !== rule[0]) errors.push(`${record.event_name} has the wrong service owner`);
     const [expectedOutcome, expectedSeverity] = expectedSignal(record);
     if (record.outcome !== expectedOutcome || record.severity !== expectedSeverity) {
@@ -275,8 +294,19 @@ export function assessModelTraceCompleteness(records) {
 
   const expected = expectedSequence(records);
   const missing = expected.filter((name) => !records.some(({ event_name: eventName }) => eventName === name));
-  const canonical = records.filter(({ event_name: eventName }) => expected.includes(eventName));
-  if (canonical.length !== records.length) errors.push('trace contains noncanonical or duplicate model stages');
+  const core = records.filter(({ event_name: eventName }) => eventName !== 'relay.transition.rejected');
+  const canonical = core.filter(({ event_name: eventName }) => expected.includes(eventName));
+  if (canonical.length !== core.length) errors.push('trace contains noncanonical or duplicate model stages');
+  const terminalIndex = records.findIndex(({ event_name: eventName }) => (
+    eventName === 'relay.job.completed' || eventName === 'relay.job.failed'
+  ));
+  for (let index = 0; index < records.length; index += 1) {
+    if (records[index].event_name !== 'relay.transition.rejected') continue;
+    if (terminalIndex !== -1 && index < terminalIndex) {
+      errors.push('relay.transition.rejected appears before the terminal model result');
+      break;
+    }
+  }
   for (let index = 0; index < canonical.length; index += 1) {
     if (canonical[index].event_name !== expected[index]) errors.push('canonical model evidence is out of order');
     if (index === 0) {

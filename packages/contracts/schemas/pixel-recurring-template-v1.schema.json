@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://pixel-hq.local/schemas/pixel-recurring-template-v1.schema.json",
+  "title": "Pixel Recurring Template v1",
+  "required": [
+    "template_id",
+    "event_name",
+    "schema_version",
+    "status",
+    "job_type",
+    "requested_capability",
+    "schedule",
+    "missed_run_policy",
+    "overlap_policy",
+    "authorization_ref",
+    "revision",
+    "created_at",
+    "updated_at",
+    "provenance"
+  ],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "event_name": {
+      "const": "pixel.recurring-template.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "enum": [
+        "ACTIVE",
+        "PAUSED",
+        "RETIRED"
+      ]
+    },
+    "job_type": {
+      "const": "system-status"
+    },
+    "requested_capability": {
+      "enum": [
+        "pixel.system-status.read",
+        "pixel.system-status.raw.read"
+      ]
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "anchor_at",
+        "interval_seconds"
+      ],
+      "properties": {
+        "kind": {
+          "const": "FIXED_INTERVAL"
+        },
+        "anchor_at": {
+          "type": "string",
+          "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 31536000
+        }
+      }
+    },
+    "missed_run_policy": {
+      "enum": [
+        "SKIP",
+        "RUN_ONCE_FOR_MISSED_WINDOW"
+      ]
+    },
+    "overlap_policy": {
+      "enum": [
+        "SKIP"
+      ]
+    },
+    "authorization_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "maxLength": 160
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\.\\d{3}Z$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calendar_contract"
+      ],
+      "properties": {
+        "calendar_contract": {
+          "const": "pixel.calendar.v1"
+        }
+      }
+    }
+  }
+}
